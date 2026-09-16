@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
 import OrganizationForm from '../components/organizations/OrganizationForm';
+import FilterBar from '../components/filters/FilterBar';
+import FilterSelect from '../components/filters/FilterSelect';
 import useDebounce from '../hooks/useDebounce';
 import usePagination from '../hooks/usePagination';
 import useLocalStorage from '../hooks/useLocalStorage';
@@ -28,40 +30,86 @@ export default function Organizations() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrg, setEditingOrg] = useState(null);
   
-  // Search State
+  // Filter States
   const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [sortFilter, setSortFilter] = useState("Newest First");
+
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  // Filter Logic
-  const filteredOrgs = organizations.filter((org) => {
-    const searchString = `${org.organizationName} ${org.organizationCode} ${org.ownerName} ${org.industry} ${org.city}`.toLowerCase();
-    return searchString.includes(debouncedSearchTerm.toLowerCase());
-  });
+  // Compute unique options directly from current organizations data
+  const uniqueTypes = useMemo(() => {
+    const types = new Set(organizations.map(o => o.organizationType || 'Other'));
+    return Array.from(types).sort();
+  }, [organizations]);
+
+  const uniqueStatuses = useMemo(() => {
+    const statuses = new Set(organizations.map(o => o.status || 'Active'));
+    return Array.from(statuses).sort();
+  }, [organizations]);
+
+  // Derived filtered and sorted array
+  const filteredOrgs = useMemo(() => {
+    let result = organizations.filter((org) => {
+      // 1. Expanded Search
+      const searchString = `${org.organizationName} ${org.organizationCode} ${org.organizationType || ''} ${org.ownerName} ${org.ownerEmail} ${org.country} ${org.city} ${org.industry}`.toLowerCase();
+      if (debouncedSearchTerm && !searchString.includes(debouncedSearchTerm.toLowerCase())) {
+        return false;
+      }
+
+      // 2. Type Match
+      const orgType = org.organizationType || 'Other';
+      if (typeFilter && orgType !== typeFilter) return false;
+
+      // 3. Status Match
+      const orgStatus = org.status || 'Active';
+      if (statusFilter && orgStatus !== statusFilter) return false;
+
+      return true;
+    });
+
+    // 4. Sorting
+    result.sort((a, b) => {
+      if (sortFilter === 'Name A-Z') {
+        return (a.organizationName || "").localeCompare(b.organizationName || "");
+      }
+      if (sortFilter === 'Name Z-A') {
+        return (b.organizationName || "").localeCompare(a.organizationName || "");
+      }
+      if (sortFilter === 'Most Users') {
+        return (b.totalUsers || 0) - (a.totalUsers || 0);
+      }
+      if (sortFilter === 'Oldest First') {
+        return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+      }
+      // Default: Newest First
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+
+    return result;
+  }, [organizations, debouncedSearchTerm, typeFilter, statusFilter, sortFilter]);
 
   // Pagination Logic
-  const itemsPerPage = 5; // Display 5 per page as requested
+  const itemsPerPage = 5; 
   const { currentPage, totalPages, currentItems, next, prev, jump } = usePagination(filteredOrgs, itemsPerPage);
 
-  // Reset to page 1 whenever the search term changes!
+  // Reset to page 1 whenever any filter changes
   useEffect(() => {
-    if (currentPage !== 1) {
-      jump(1);
-    }
+    if (jump) jump(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm, typeFilter, statusFilter, sortFilter]);
 
   // Handlers
   const handleSaveOrg = (submittedData) => {
     if (editingOrg) {
-      // Edit Mode
       setOrganizations((prev) => 
         prev.map((org) => (org.id === editingOrg.id ? { ...org, ...submittedData } : org))
       );
     } else {
-      // Add Mode
       const newOrg = {
         ...submittedData,
-        id: Date.now(), // Generate a unique ID
+        id: Date.now(),
         totalUsers: 0,
         totalExperiences: 0,
         createdAt: new Date().toISOString().split('T')[0]
@@ -72,14 +120,20 @@ export default function Organizations() {
   };
 
   const handleDeleteClick = (org) => {
-    // Stage 10 requests we do not implement fully functioning delete yet, 
-    // just the UI placeholder, but we can easily wire it up or mock it if needed.
-    // For now, we will just delete it directly or show an alert. 
-    // Actually, "Even if delete functionality is not implemented yet" implies we don't have to build the confirmation modal.
     if (window.confirm(`Are you sure you want to delete ${org.organizationName}?`)) {
       setOrganizations((prev) => prev.filter(o => o.id !== org.id));
     }
   };
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setTypeFilter("");
+    setStatusFilter("");
+    setSortFilter("Newest First");
+    if (jump) jump(1);
+  };
+
+  const hasActiveFilters = debouncedSearchTerm || typeFilter || statusFilter || sortFilter !== "Newest First";
 
   // Badge Helpers
   const getStatusColor = (status) => {
@@ -117,9 +171,12 @@ export default function Organizations() {
         </Button>
       </div>
 
-      {/* Search Bar & Summary */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div className="w-full md:w-72">
+      {/* Advanced Filter Bar */}
+      <FilterBar onClear={handleClearFilters} showClear={hasActiveFilters}>
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
+            Search
+          </label>
           <Input 
             placeholder="Search organizations..." 
             value={searchTerm}
@@ -127,12 +184,35 @@ export default function Organizations() {
             onClear={() => setSearchTerm('')}
           />
         </div>
-        
-        {/* Results Summary */}
-        {filteredOrgs.length > 0 && (
-          <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredOrgs.length)} of {filteredOrgs.length} organizations
-          </div>
+        <FilterSelect 
+          label="Organization Type" 
+          value={typeFilter} 
+          onChange={setTypeFilter} 
+          options={uniqueTypes} 
+          defaultLabel="All Types" 
+        />
+        <FilterSelect 
+          label="Status" 
+          value={statusFilter} 
+          onChange={setStatusFilter} 
+          options={uniqueStatuses} 
+          defaultLabel="All Statuses" 
+        />
+        <FilterSelect 
+          label="Sort By" 
+          value={sortFilter} 
+          onChange={setSortFilter} 
+          options={["Newest First", "Oldest First", "Name A-Z", "Name Z-A", "Most Users"]} 
+          defaultLabel="Sort By..." 
+        />
+      </FilterBar>
+      
+      {/* Results Summary */}
+      <div className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-4">
+        {filteredOrgs.length > 0 ? (
+          <>Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredOrgs.length)} of {filteredOrgs.length} organizations</>
+        ) : (
+          <>0 organizations found</>
         )}
       </div>
 
@@ -140,16 +220,18 @@ export default function Organizations() {
       {filteredOrgs.length === 0 ? (
         <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
           {organizations.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400">No organizations exist in the system. Click "+ Add Organization" to get started!</p>
+            <p className="text-gray-500 dark:text-gray-400">No organizations available yet. Click "+ Add Organization" to get started!</p>
           ) : (
             <div className="flex flex-col items-center justify-center space-y-4">
-              <p className="text-gray-500 dark:text-gray-400">No organizations found matching "{searchTerm}"</p>
-              <button 
-                onClick={() => setSearchTerm('')}
-                className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline focus:outline-none"
-              >
-                Clear Search
-              </button>
+              <p className="text-gray-500 dark:text-gray-400">No organizations match your current filters.</p>
+              {hasActiveFilters && (
+                <button 
+                  onClick={handleClearFilters}
+                  className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline focus:outline-none"
+                >
+                  Clear Filters
+                </button>
+              )}
             </div>
           )}
         </div>
