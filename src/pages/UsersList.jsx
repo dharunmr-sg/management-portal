@@ -9,6 +9,29 @@ import useDebounce from '../hooks/useDebounce';
 import usePagination from '../hooks/usePagination';
 import useLocalStorage from '../hooks/useLocalStorage';
 
+const defaultNewUser = {
+  firstName: '',
+  lastName: '',
+  username: '',
+  email: '',
+  phone: '',
+  profilePhoto: null,
+  dob: '',
+  gender: '',
+  country: '',
+  state: '',
+  city: '',
+  organization: '',
+  jobTitle: '',
+  role: 'Viewer',
+  status: 'Active',
+  password: '',
+  confirmPassword: '',
+  emailNotifications: true,
+  twoFactorAuth: false,
+  notes: ''
+};
+
 export default function UsersList() {
   // --- NEW: Hybrid Data Architecture ---
   // We swapped useState for useLocalStorage! Now, every time setUsers is called,
@@ -211,7 +234,7 @@ export default function UsersList() {
         title={editingUser ? "Edit User" : "Add New User"}
       >
         <UserForm 
-          initialValues={editingUser || {}}
+          initialValues={editingUser || defaultNewUser}
           onSubmit={handleSaveUser} 
           onCancel={() => setIsModalOpen(false)} 
         />
