@@ -12,7 +12,7 @@ import { useTheme } from './context/ThemeContext'; // 1. Import teleporter!
 
 function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+
   // 2. Grab the dark mode state!
   const { isDarkMode } = useTheme();
 
@@ -31,7 +31,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              
+
               {/* Note how order doesn't usually matter, but specific routes should generally go before dynamic ones */}
               <Route path="/users" element={<UsersList />} />
               <Route path="/users/:id" element={<UserDetail />} />

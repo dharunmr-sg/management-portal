@@ -21,8 +21,9 @@ export default function UserForm({
   isSubmitting = false
 }) {
   const [formData, setFormData] = useState({
-    firstName: initialValues.firstName || '',
-    lastName: initialValues.lastName || '',
+    // Smartly map legacy "name" into our modern split fields if it exists!
+    firstName: initialValues.firstName || (initialValues.name ? initialValues.name.split(' ')[0] : ''),
+    lastName: initialValues.lastName || (initialValues.name ? initialValues.name.split(' ').slice(1).join(' ') : ''),
     username: initialValues.username || '',
     email: initialValues.email || '',
     phone: initialValues.phone || '',
@@ -31,8 +32,9 @@ export default function UserForm({
     gender: initialValues.gender || '',
     country: initialValues.country || '',
     state: initialValues.state || '',
-    city: initialValues.city || '',
-    organization: initialValues.organization || '',
+    // Smartly map legacy nested objects!
+    city: initialValues.city || (initialValues.address?.city || ''),
+    organization: initialValues.organization || (initialValues.company?.name || ''),
     jobTitle: initialValues.jobTitle || '',
     role: initialValues.role || 'Viewer',
     status: initialValues.status || 'Active',
