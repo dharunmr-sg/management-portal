@@ -1,6 +1,7 @@
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useSidebar } from '../../context/SidebarContext';
+import { useProductContext } from '../../context/ProductContext';
 
 const getPageTitle = (pathname) => {
   if (pathname === '/' || pathname.startsWith('/dashboard')) return 'Dashboard';
@@ -10,12 +11,14 @@ const getPageTitle = (pathname) => {
   if (pathname.startsWith('/organizations/')) return 'Organization Details';
   if (pathname === '/settings' || pathname.startsWith('/settings')) return 'Settings';
   if (pathname.startsWith('/analytics')) return 'Dashboard';
+  if (pathname.startsWith('/products')) return 'Products';
   return 'Dashboard';
 };
 
 export default function Navbar({ onMenuClick }) {
   const { isDarkMode, toggleTheme } = useTheme();
   const { isCollapsed, openMobile } = useSidebar();
+  const { selectedProduct, setSelectedProduct } = useProductContext();
   const location = useLocation();
   const pageTitle = getPageTitle(location.pathname);
 
@@ -64,13 +67,44 @@ export default function Navbar({ onMenuClick }) {
 
         {/* Content header section: positioned exactly above the main content area */}
         <div className="flex-1 flex items-center justify-between px-4 sm:px-5 md:px-6 max-w-7xl mx-auto w-full h-full">
-          <div className="flex items-center">
-            <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
-              {pageTitle}
-            </h1>
+          <div className="flex items-center min-w-0">
+            {location.pathname === '/products' && selectedProduct ? (
+              <div className="flex items-center bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-full border border-blue-100 dark:border-blue-800 animate-fade-in truncate">
+                {selectedProduct.thumbnail ? (
+                  <img 
+                    src={selectedProduct.thumbnail} 
+                    alt={selectedProduct.title} 
+                    className="w-6 h-6 rounded-full object-cover mr-2 bg-white dark:bg-gray-800"
+                  />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center mr-2 text-[10px] font-bold text-blue-600 dark:text-blue-300">
+                    {selectedProduct.title.charAt(0)}
+                  </div>
+                )}
+                <span className="text-sm font-semibold text-blue-900 dark:text-blue-100 truncate mr-2">
+                  {selectedProduct.title}
+                </span>
+                <span className="text-xs text-blue-600 dark:text-blue-400 font-medium mr-3 hidden sm:inline">
+                  ${Number(selectedProduct.price).toFixed(2)}
+                </span>
+                <button 
+                  onClick={() => setSelectedProduct(null)}
+                  className="p-1 rounded-full text-blue-400 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-800/50 transition-colors flex-shrink-0"
+                  aria-label="Clear selected product"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300 truncate">
+                {pageTitle}
+              </h1>
+            )}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-shrink-0 ml-4">
             {/* Dark Mode Toggle Button */}
             <button
               onClick={toggleTheme}

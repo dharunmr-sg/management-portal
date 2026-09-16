@@ -5,11 +5,13 @@ import UserDetail from './pages/UserDetail';
 import Organizations from './pages/Organizations';
 import OrganizationDetail from './pages/OrganizationDetail';
 import Settings from './pages/Settings';
+import Products from './pages/Products';
 import NotFound from './pages/NotFound';
 import Navbar from './components/layout/Navbar';
 import Sidebar from './components/layout/Sidebar';
 import PageContainer from './components/layout/PageContainer';
 import { SidebarProvider } from './context/SidebarContext';
+import { ProductProvider } from './context/ProductContext';
 
 function AppContent() {
   return (
@@ -22,6 +24,7 @@ function AppContent() {
             <Routes>
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/products" element={<Products />} />
               <Route path="/analytics" element={<Navigate to="/dashboard" replace />} />
               <Route path="/organizations" element={<Organizations />} />
               <Route path="/organizations/:id" element={<OrganizationDetail />} />
@@ -43,7 +46,9 @@ function AppContent() {
 export default function App() {
   return (
     <SidebarProvider>
-      <AppContent />
+      <ProductProvider>
+        <AppContent />
+      </ProductProvider>
     </SidebarProvider>
   );
 }
