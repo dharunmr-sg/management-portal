@@ -28,5 +28,9 @@ export default function usePagination(items, itemsPerPage) {
     setCurrentPage((prev) => Math.max(prev - 1, 1));
   };
 
-  return { currentPage, totalPages, currentItems, next, prev };
+  const jump = (page) => {
+    setCurrentPage(Math.min(Math.max(1, page), totalPages || 1));
+  };
+
+  return { currentPage, totalPages, currentItems, next, prev, jump };
 }

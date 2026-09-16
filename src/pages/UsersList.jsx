@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Spinner from '../components/ui/Spinner';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import UserForm from '../components/users/UserForm';
 import DataGrid from '../components/data/DataGrid';
+import FilterBar from '../components/filters/FilterBar';
+import FilterSelect from '../components/filters/FilterSelect';
 import useDebounce from '../hooks/useDebounce';
 import usePagination from '../hooks/usePagination';
 import useLocalStorage from '../hooks/useLocalStorage';
@@ -33,9 +35,6 @@ const defaultNewUser = {
 };
 
 export default function UsersList() {
-  // --- NEW: Hybrid Data Architecture ---
-  // We swapped useState for useLocalStorage! Now, every time setUsers is called,
-  // the array is automatically stringified and saved to the browser's hard drive.
   const [users, setUsers] = useLocalStorage('guidexr-users', []);
   
   const [isLoading, setIsLoading] = useState(true);
@@ -46,13 +45,16 @@ export default function UsersList() {
   const [editingUser, setEditingUser] = useState(null);
   const [userToDelete, setUserToDelete] = useState(null);
 
+  // Filter States
   const [searchTerm, setSearchTerm] = useState("");
+  const [orgFilter, setOrgFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [sortFilter, setSortFilter] = useState("Newest First");
+  
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   useEffect(() => {
-    // --- NEW: Offline Support / Local Storage Check ---
-    // Because useLocalStorage loads synchronously, if there was data on the hard drive,
-    // the users array is already populated! We can skip the API call entirely.
     if (users.length > 0) {
       setIsLoading(false);
       return;
@@ -87,12 +89,69 @@ export default function UsersList() {
     };
   }, []);
 
-  const filteredUsers = users.filter((user) => {
-    const searchString = user.name || (user.firstName + " " + user.lastName) || "";
-    return searchString.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
-  });
+  // Compute unique options for dropdowns directly from the data
+  const uniqueOrgs = useMemo(() => {
+    const orgs = new Set(users.map(u => u.organization || 'Unassigned'));
+    return Array.from(orgs).sort();
+  }, [users]);
 
-  // Determine the ideal number of items per page based on screen width!
+  const uniqueRoles = useMemo(() => {
+    const roles = new Set(users.map(u => u.role || 'Viewer'));
+    return Array.from(roles).sort();
+  }, [users]);
+
+  const uniqueStatuses = useMemo(() => {
+    const statuses = new Set(users.map(u => u.status || 'Active'));
+    return Array.from(statuses).sort();
+  }, [users]);
+
+  // Derived filtered and sorted array
+  const filteredUsers = useMemo(() => {
+    let result = users.filter((user) => {
+      // 1. Expanded Search
+      const searchString = `${user.name || (user.firstName + " " + user.lastName)} ${user.email || ''} ${user.phone || ''} ${user.organization || 'Unassigned'} ${user.role || 'Viewer'}`.toLowerCase();
+      if (debouncedSearchTerm && !searchString.includes(debouncedSearchTerm.toLowerCase())) {
+        return false;
+      }
+
+      // 2. Organization Match
+      const userOrg = user.organization || 'Unassigned';
+      if (orgFilter && userOrg !== orgFilter) return false;
+
+      // 3. Role Match
+      const userRole = user.role || 'Viewer';
+      if (roleFilter && userRole !== roleFilter) return false;
+
+      // 4. Status Match
+      const userStatus = user.status || 'Active';
+      if (statusFilter && userStatus !== statusFilter) return false;
+
+      return true;
+    });
+
+    // 5. Sorting
+    result.sort((a, b) => {
+      if (sortFilter === 'Name A-Z') {
+        const nameA = (a.name || a.firstName || "").toLowerCase();
+        const nameB = (b.name || b.firstName || "").toLowerCase();
+        return nameA.localeCompare(nameB);
+      }
+      if (sortFilter === 'Name Z-A') {
+        const nameA = (a.name || a.firstName || "").toLowerCase();
+        const nameB = (b.name || b.firstName || "").toLowerCase();
+        return nameB.localeCompare(nameA);
+      }
+      if (sortFilter === 'Oldest First') {
+        return a.id - b.id; // Assuming lower IDs are older
+      }
+      // Default: Newest First
+      return b.id - a.id;
+    });
+
+    return result;
+  }, [users, debouncedSearchTerm, orgFilter, roleFilter, statusFilter, sortFilter]);
+
+  // Determine the ideal number of items per page based on screen width
   const [itemsPerPage, setItemsPerPage] = useState(6);
 
   useEffect(() => {
@@ -107,50 +166,52 @@ export default function UsersList() {
       }
     };
 
-    // Run once on mount
     handleResize();
-
-    // Listen for window resize
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Apply our pagination hook using the dynamic itemsPerPage!
-  const { currentPage, totalPages, currentItems, next, prev } = usePagination(filteredUsers, itemsPerPage);
+  const { currentPage, totalPages, currentItems, next, prev, jump } = usePagination(filteredUsers, itemsPerPage);
 
-  // --- NEW: Universal Save Handler ---
-  // This function handles BOTH Add and Edit!
+  // Reset pagination to page 1 whenever any filter changes
+  useEffect(() => {
+    if (jump) jump(1);
+  }, [debouncedSearchTerm, orgFilter, roleFilter, statusFilter, sortFilter]);
+
   const handleSaveUser = (submittedData) => {
-    // Reconstruct the legacy 'name' field so it doesn't crash the DataGrid and Search
     const mappedData = {
       ...submittedData,
       name: `${submittedData.firstName || ''} ${submittedData.lastName || ''}`.trim()
     };
 
     if (editingUser) {
-      // EDIT MODE
-      mappedData.id = editingUser.id; // Crucial: preserve the ID!
+      mappedData.id = editingUser.id;
       setUsers((prevUsers) => 
         prevUsers.map((user) => (user.id === mappedData.id ? mappedData : user))
       );
     } else {
-      // ADD MODE
       mappedData.id = Date.now();
       setUsers((prevUsers) => [mappedData, ...prevUsers]);
     }
 
-    // Close the modal
     setIsModalOpen(false);
   };
 
-  // --- NEW: Delete Handler ---
   const handleDeleteUser = () => {
-    // We use array.filter() to keep everyone EXCEPT the one we want to delete!
     setUsers((prevUsers) => prevUsers.filter((u) => u.id !== userToDelete.id));
-    
-    // Close the modal
     setUserToDelete(null);
   };
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setOrgFilter("");
+    setRoleFilter("");
+    setStatusFilter("");
+    setSortFilter("Newest First");
+    if (jump) jump(1);
+  };
+
+  const hasActiveFilters = debouncedSearchTerm || orgFilter || roleFilter || statusFilter || sortFilter !== "Newest First";
 
   return (
     <div>
@@ -162,31 +223,66 @@ export default function UsersList() {
         </div>
         
         <Button onClick={() => {
-          setEditingUser(null); // Ensure we clear any old edit data!
+          setEditingUser(null);
           setIsModalOpen(true);
         }}>
           + Add New User
         </Button>
       </div>
-      
-      {/* Search Bar & Summary */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div className="w-full md:w-72">
+
+      {/* Advanced Filter Bar */}
+      <FilterBar onClear={handleClearFilters} showClear={hasActiveFilters}>
+        <div className="flex-1 min-w-[200px]">
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
+            Search
+          </label>
           <Input 
-            placeholder="Search by name..." 
+            placeholder="Name, email, or phone..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onClear={() => setSearchTerm('')}
           />
         </div>
-        
-        {/* Results Summary */}
-        {!isLoading && !error && filteredUsers.length > 0 && (
-          <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredUsers.length)} of {filteredUsers.length} users
-          </div>
-        )}
-      </div>
+        <FilterSelect 
+          label="Organization" 
+          value={orgFilter} 
+          onChange={setOrgFilter} 
+          options={uniqueOrgs} 
+          defaultLabel="All Organizations" 
+        />
+        <FilterSelect 
+          label="Role" 
+          value={roleFilter} 
+          onChange={setRoleFilter} 
+          options={uniqueRoles} 
+          defaultLabel="All Roles" 
+        />
+        <FilterSelect 
+          label="Status" 
+          value={statusFilter} 
+          onChange={setStatusFilter} 
+          options={uniqueStatuses} 
+          defaultLabel="All Statuses" 
+        />
+        <FilterSelect 
+          label="Sort By" 
+          value={sortFilter} 
+          onChange={setSortFilter} 
+          options={["Newest First", "Oldest First", "Name A-Z", "Name Z-A"]} 
+          defaultLabel="Sort By..." 
+        />
+      </FilterBar>
+
+      {/* Results Summary */}
+      {!isLoading && !error && (
+        <div className="text-sm text-gray-500 dark:text-gray-400 font-medium mb-4">
+          {filteredUsers.length > 0 ? (
+            <>Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredUsers.length)} of {filteredUsers.length} users</>
+          ) : (
+            <>0 users found</>
+          )}
+        </div>
+      )}
       
       {isLoading && (
         <div className="flex items-center gap-3">
@@ -209,13 +305,15 @@ export default function UsersList() {
                 <p className="text-gray-500 dark:text-gray-400">No users exist in the system. Click "+ Add New User" to get started!</p>
               ) : (
                 <div className="flex flex-col items-center justify-center space-y-4">
-                  <p className="text-gray-500 dark:text-gray-400">No users found matching "{searchTerm}"</p>
-                  <button 
-                    onClick={() => setSearchTerm('')}
-                    className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline focus:outline-none"
-                  >
-                    Clear Search
-                  </button>
+                  <p className="text-gray-500 dark:text-gray-400">No users match your current filters.</p>
+                  {hasActiveFilters && (
+                    <button 
+                      onClick={handleClearFilters}
+                      className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline focus:outline-none"
+                    >
+                      Clear Filters
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -262,7 +360,7 @@ export default function UsersList() {
         />
       </Modal>
 
-      {/* --- NEW: The Delete Confirmation Modal --- */}
+      {/* The Delete Confirmation Modal */}
       <Modal 
         isOpen={userToDelete !== null} 
         onClose={() => setUserToDelete(null)} 
