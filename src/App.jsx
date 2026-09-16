@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import UsersList from './pages/UsersList';
 import UserDetail from './pages/UserDetail';
 import Organizations from './pages/Organizations';
+import OrganizationDetail from './pages/OrganizationDetail';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
 import NotFound from './pages/NotFound';
@@ -38,6 +39,7 @@ function App() {
               {/* Note how order doesn't usually matter, but specific routes should generally go before dynamic ones */}
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/organizations" element={<Organizations />} />
+              <Route path="/organizations/:id" element={<OrganizationDetail />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/users" element={<UsersList />} />
               <Route path="/users/:id" element={<UserDetail />} />

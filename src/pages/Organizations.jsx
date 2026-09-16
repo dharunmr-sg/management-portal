@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -34,6 +35,7 @@ export default function Organizations() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [planFilter, setPlanFilter] = useState("");
   const [sortFilter, setSortFilter] = useState("Newest First");
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -47,6 +49,11 @@ export default function Organizations() {
   const uniqueStatuses = useMemo(() => {
     const statuses = new Set(organizations.map(o => o.status || 'Active'));
     return Array.from(statuses).sort();
+  }, [organizations]);
+
+  const uniquePlans = useMemo(() => {
+    const plans = new Set(organizations.map(o => o.subscriptionPlan || 'Free'));
+    return Array.from(plans).sort();
   }, [organizations]);
 
   // Derived filtered and sorted array
@@ -66,10 +73,14 @@ export default function Organizations() {
       const orgStatus = org.status || 'Active';
       if (statusFilter && orgStatus !== statusFilter) return false;
 
+      // 4. Plan Match
+      const orgPlan = org.subscriptionPlan || 'Free';
+      if (planFilter && orgPlan !== planFilter) return false;
+
       return true;
     });
 
-    // 4. Sorting
+    // 5. Sorting
     result.sort((a, b) => {
       if (sortFilter === 'Name A-Z') {
         return (a.organizationName || "").localeCompare(b.organizationName || "");
@@ -88,7 +99,7 @@ export default function Organizations() {
     });
 
     return result;
-  }, [organizations, debouncedSearchTerm, typeFilter, statusFilter, sortFilter]);
+  }, [organizations, debouncedSearchTerm, typeFilter, statusFilter, planFilter, sortFilter]);
 
   // Pagination Logic
   const itemsPerPage = 5; 
@@ -98,7 +109,7 @@ export default function Organizations() {
   useEffect(() => {
     if (jump) jump(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearchTerm, typeFilter, statusFilter, sortFilter]);
+  }, [debouncedSearchTerm, typeFilter, statusFilter, planFilter, sortFilter]);
 
   // Handlers
   const handleSaveOrg = (submittedData) => {
@@ -129,11 +140,12 @@ export default function Organizations() {
     setSearchTerm("");
     setTypeFilter("");
     setStatusFilter("");
+    setPlanFilter("");
     setSortFilter("Newest First");
     if (jump) jump(1);
   };
 
-  const hasActiveFilters = debouncedSearchTerm || typeFilter || statusFilter || sortFilter !== "Newest First";
+  const hasActiveFilters = debouncedSearchTerm || typeFilter || statusFilter || planFilter || sortFilter !== "Newest First";
 
   // Badge Helpers
   const getStatusColor = (status) => {
@@ -197,6 +209,13 @@ export default function Organizations() {
           onChange={setStatusFilter} 
           options={uniqueStatuses} 
           defaultLabel="All Statuses" 
+        />
+        <FilterSelect 
+          label="Plan" 
+          value={planFilter} 
+          onChange={setPlanFilter} 
+          options={uniquePlans} 
+          defaultLabel="All Plans" 
         />
         <FilterSelect 
           label="Sort By" 
@@ -296,6 +315,13 @@ export default function Organizations() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity focus-within:opacity-100">
+                          <Link 
+                            to={`/organizations/${org.id}`}
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 focus:outline-none"
+                            aria-label={`View ${org.organizationName}`}
+                          >
+                            View
+                          </Link>
                           <button 
                             onClick={() => {
                               setEditingOrg(org);
@@ -316,6 +342,7 @@ export default function Organizations() {
                         </div>
                         {/* Fallback for touch devices where hover is not a thing */}
                         <div className="flex items-center justify-end gap-3 md:hidden">
+                          <Link to={`/organizations/${org.id}`} className="text-blue-600 dark:text-blue-400">View</Link>
                           <button onClick={() => { setEditingOrg(org); setIsModalOpen(true); }} className="text-indigo-600 dark:text-indigo-400">Edit</button>
                           <button onClick={() => handleDeleteClick(org)} className="text-red-600 dark:text-red-400">Delete</button>
                         </div>

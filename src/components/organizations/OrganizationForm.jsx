@@ -3,6 +3,14 @@ import Input from '../ui/Input';
 import Button from '../ui/Button';
 import { isRequired, isValidEmail } from '../../utils/validators';
 
+// Helper component for accessible required labels
+const Label = ({ htmlFor, children, required }) => (
+  <label htmlFor={htmlFor} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+    {children} {required && <span aria-hidden="true" className="text-red-500 ml-0.5">*</span>}
+    {required && <span className="sr-only">required</span>}
+  </label>
+);
+
 export default function OrganizationForm({ initialValues, onSubmit, onCancel }) {
   // 1. Initialize our form state with the exact fields we need
   const [formData, setFormData] = useState({
@@ -98,8 +106,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Organization Name *</label>
+            <Label htmlFor="organizationName" required>Organization Name</Label>
             <Input
+              id="organizationName"
               name="organizationName"
               placeholder="Acme Corp"
               value={formData.organizationName}
@@ -108,8 +117,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Organization Code *</label>
+            <Label htmlFor="organizationCode" required>Organization Code</Label>
             <Input
+              id="organizationCode"
               name="organizationCode"
               placeholder="ACM-001"
               value={formData.organizationCode}
@@ -118,8 +128,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Organization Type *</label>
+            <Label htmlFor="organizationType" required>Organization Type</Label>
             <select
+              id="organizationType"
               name="organizationType"
               value={formData.organizationType}
               onChange={handleChange}
@@ -136,8 +147,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
             {errors.organizationType && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.organizationType}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Industry</label>
+            <Label htmlFor="industry">Industry</Label>
             <Input
+              id="industry"
               name="industry"
               placeholder="Technology"
               value={formData.industry}
@@ -156,8 +168,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Owner Name *</label>
+            <Label htmlFor="ownerName" required>Owner Name</Label>
             <Input
+              id="ownerName"
               name="ownerName"
               placeholder="Jane Doe"
               value={formData.ownerName}
@@ -166,8 +179,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Owner Email *</label>
+            <Label htmlFor="ownerEmail" required>Owner Email</Label>
             <Input
+              id="ownerEmail"
               type="email"
               name="ownerEmail"
               placeholder="jane@example.com"
@@ -177,8 +191,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contact Number *</label>
+            <Label htmlFor="contactNumber" required>Contact Number</Label>
             <Input
+              id="contactNumber"
               name="contactNumber"
               placeholder="+1 (555) 123-4567"
               value={formData.contactNumber}
@@ -187,8 +202,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Alternate Contact</label>
+            <Label htmlFor="alternateContactNumber">Alternate Contact</Label>
             <Input
+              id="alternateContactNumber"
               name="alternateContactNumber"
               placeholder="+1 (555) 987-6543"
               value={formData.alternateContactNumber}
@@ -207,8 +223,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 1</label>
+            <Label htmlFor="addressLine1">Address Line 1</Label>
             <Input
+              id="addressLine1"
               name="addressLine1"
               placeholder="123 Innovation Drive"
               value={formData.addressLine1}
@@ -216,8 +233,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address Line 2</label>
+            <Label htmlFor="addressLine2">Address Line 2</Label>
             <Input
+              id="addressLine2"
               name="addressLine2"
               placeholder="Suite 500"
               value={formData.addressLine2}
@@ -225,8 +243,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City *</label>
+            <Label htmlFor="city" required>City</Label>
             <Input
+              id="city"
               name="city"
               placeholder="San Francisco"
               value={formData.city}
@@ -235,8 +254,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">State / Province</label>
+            <Label htmlFor="state">State / Province</Label>
             <Input
+              id="state"
               name="state"
               placeholder="CA"
               value={formData.state}
@@ -244,8 +264,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Country *</label>
+            <Label htmlFor="country" required>Country</Label>
             <Input
+              id="country"
               name="country"
               placeholder="United States"
               value={formData.country}
@@ -254,8 +275,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Postal Code</label>
+            <Label htmlFor="postalCode">Postal Code</Label>
             <Input
+              id="postalCode"
               name="postalCode"
               placeholder="94103"
               value={formData.postalCode}
@@ -274,8 +296,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subscription Plan *</label>
+            <Label htmlFor="subscriptionPlan" required>Subscription Plan</Label>
             <select
+              id="subscriptionPlan"
               name="subscriptionPlan"
               value={formData.subscriptionPlan}
               onChange={handleChange}
@@ -290,8 +313,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
             {errors.subscriptionPlan && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.subscriptionPlan}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status *</label>
+            <Label htmlFor="status" required>Status</Label>
             <select
+              id="status"
               name="status"
               value={formData.status}
               onChange={handleChange}
@@ -303,8 +327,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
             </select>
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Website</label>
+            <Label htmlFor="website">Website</Label>
             <Input
+              id="website"
               name="website"
               type="url"
               placeholder="https://example.com"
@@ -313,8 +338,9 @@ export default function OrganizationForm({ initialValues, onSubmit, onCancel }) 
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+            <Label htmlFor="description">Description</Label>
             <textarea
+              id="description"
               name="description"
               rows={3}
               placeholder="Enter a brief description of the organization..."
