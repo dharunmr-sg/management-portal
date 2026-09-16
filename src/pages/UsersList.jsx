@@ -3,7 +3,7 @@ import Spinner from '../components/ui/Spinner';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
-import UserForm from '../components/UserForm';
+import UserForm from '../components/users/UserForm';
 import DataGrid from '../components/data/DataGrid';
 import useDebounce from '../hooks/useDebounce';
 import usePagination from '../hooks/usePagination';
@@ -64,9 +64,10 @@ export default function UsersList() {
     };
   }, []);
 
-  const filteredUsers = users.filter((user) => 
-    user.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-  );
+  const filteredUsers = users.filter((user) => {
+    const searchString = user.name || (user.firstName + " " + user.lastName) || "";
+    return searchString.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+  });
 
   // Determine the ideal number of items per page based on screen width!
   const [itemsPerPage, setItemsPerPage] = useState(6);
@@ -97,21 +98,22 @@ export default function UsersList() {
   // --- NEW: Universal Save Handler ---
   // This function handles BOTH Add and Edit!
   const handleSaveUser = (submittedData) => {
+    // Reconstruct the legacy 'name' field so it doesn't crash the DataGrid and Search
+    const mappedData = {
+      ...submittedData,
+      name: `${submittedData.firstName || ''} ${submittedData.lastName || ''}`.trim()
+    };
+
     if (editingUser) {
       // EDIT MODE
-      // We use array.map() to loop through every user.
-      // If the ID matches, we replace the old object with the newly submitted data!
+      mappedData.id = editingUser.id; // Crucial: preserve the ID!
       setUsers((prevUsers) => 
-        prevUsers.map((user) => (user.id === submittedData.id ? submittedData : user))
+        prevUsers.map((user) => (user.id === mappedData.id ? mappedData : user))
       );
     } else {
       // ADD MODE
-      const newUser = {
-        ...submittedData,
-        id: Date.now() // Fake ID
-      };
-      // Brand new array with the new user at the front!
-      setUsers((prevUsers) => [newUser, ...prevUsers]);
+      mappedData.id = Date.now();
+      setUsers((prevUsers) => [mappedData, ...prevUsers]);
     }
 
     // Close the modal
@@ -209,7 +211,7 @@ export default function UsersList() {
         title={editingUser ? "Edit User" : "Add New User"}
       >
         <UserForm 
-          initialData={editingUser}
+          initialValues={editingUser || {}}
           onSubmit={handleSaveUser} 
           onCancel={() => setIsModalOpen(false)} 
         />
