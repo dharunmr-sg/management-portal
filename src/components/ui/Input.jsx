@@ -1,7 +1,7 @@
 export default function Input({ type = "text", name, placeholder, value, onChange, onClear, error, className = "", ...props }) {
   // If there's an error, we swap out the gray/blue borders for red borders!
   // If onClear is provided, we add padding-right so the text doesn't overlap the clear button!
-  const baseClasses = `w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 transition-colors bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 ${onClear ? 'pr-10' : ''} ${className}`;
+  const baseClasses = `w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 transition-colors duration-300 ease-in-out bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 ${onClear ? 'pr-10' : ''} ${className}`;
   
   const stateClasses = error 
     ? "border-red-500 focus:ring-red-500 focus:border-red-500" 
@@ -24,7 +24,7 @@ export default function Input({ type = "text", name, placeholder, value, onChang
         <button 
           type="button" 
           onClick={onClear} 
-          className="absolute right-3 top-[9px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:text-gray-600 transition-colors"
+          className="absolute right-3 top-[9px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:text-gray-600 transition-colors duration-300 ease-in-out"
           aria-label="Clear input"
         >
           <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

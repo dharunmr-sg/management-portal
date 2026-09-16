@@ -63,34 +63,34 @@ export default function UserDetail() {
   const fullName = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown User';
 
   return (
-    <div className="max-w-5xl mx-auto pb-12">
+    <div className="max-w-5xl mx-auto pb-6">
       
       {/* Top Navigation */}
-      <div className="mb-6">
+      <div className="mb-4">
         <Link to="/users" className="inline-flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline text-sm font-medium transition-colors">
           &larr; Back to Users
         </Link>
       </div>
 
       {/* Header Profile Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-t-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 border-b-0">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-6">
+      <div className="bg-white dark:bg-gray-800 rounded-t-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6 border-b-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
             {/* Avatar Placeholder */}
-            <div className="h-24 w-24 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-3xl font-bold uppercase shadow-sm">
+            <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-2xl sm:text-3xl font-bold uppercase shadow-sm flex-shrink-0">
               {fullName.charAt(0)}
             </div>
             
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{fullName}</h1>
-              <p className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{fullName}</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                 {user.email || 'No email provided'}
               </p>
             </div>
           </div>
           
-          <div className="flex flex-col items-start md:items-end gap-3">
+          <div className="flex flex-row md:flex-col items-start md:items-end gap-2">
             <Badge variant={getStatusColor(user.status)}>
               {user.status || 'Active'}
             </Badge>
@@ -102,18 +102,18 @@ export default function UserDetail() {
       </div>
 
       {/* Details Grid */}
-      <div className="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8 pt-6">
+      <div className="bg-white dark:bg-gray-800 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6 pt-4 sm:pt-5">
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
           
           {/* Column 1 */}
-          <div className="space-y-8">
+          <div className="space-y-5">
             
             <section>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2.5">
                 Personal Information
               </h3>
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5 border border-gray-100 dark:border-gray-700/50">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3.5 sm:p-4 border border-gray-100 dark:border-gray-700/50">
                 <DetailField label="First Name" value={user.firstName || (user.name ? user.name.split(' ')[0] : '')} />
                 <DetailField label="Last Name" value={user.lastName || (user.name ? user.name.split(' ').slice(1).join(' ') : '')} />
                 <DetailField label="Username" value={user.username} />
@@ -124,10 +124,10 @@ export default function UserDetail() {
             </section>
 
             <section>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2.5">
                 Location
               </h3>
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5 border border-gray-100 dark:border-gray-700/50">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3.5 sm:p-4 border border-gray-100 dark:border-gray-700/50">
                 <DetailField label="City" value={user.city || user.address?.city} />
                 <DetailField label="State / Province" value={user.state} />
                 <DetailField label="Country" value={user.country} />
@@ -137,23 +137,23 @@ export default function UserDetail() {
           </div>
 
           {/* Column 2 */}
-          <div className="space-y-8">
+          <div className="space-y-5">
             
             <section>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2.5">
                 Professional Information
               </h3>
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5 border border-gray-100 dark:border-gray-700/50">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3.5 sm:p-4 border border-gray-100 dark:border-gray-700/50">
                 <DetailField label="Organization" value={user.organization || user.company?.name} />
                 <DetailField label="Job Title" value={user.jobTitle} />
               </div>
             </section>
 
             <section>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2.5">
                 Security & Preferences
               </h3>
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5 border border-gray-100 dark:border-gray-700/50">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3.5 sm:p-4 border border-gray-100 dark:border-gray-700/50">
                 <DetailField 
                   label="Email Notifications" 
                   value={user.emailNotifications !== undefined ? (user.emailNotifications ? 'Enabled' : 'Disabled') : null} 
@@ -166,10 +166,10 @@ export default function UserDetail() {
             </section>
 
             <section>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2.5">
                 Additional Notes
               </h3>
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5 border border-gray-100 dark:border-gray-700/50">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3.5 sm:p-4 border border-gray-100 dark:border-gray-700/50">
                 <p className="text-gray-900 dark:text-gray-100 text-sm whitespace-pre-wrap">
                   {user.notes || <span className="text-gray-400 dark:text-gray-500 italic">Not provided</span>}
                 </p>

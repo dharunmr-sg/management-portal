@@ -1,15 +1,36 @@
-import { createContext, useContext, useEffect } from 'react';
-import useLocalStorage from '../hooks/useLocalStorage'; // Import our new hook!
+import { createContext, useContext, useEffect, useState } from 'react';
+import useLocalStorage from '../hooks/useLocalStorage';
 
 // 1. Create the Teleporter (Context)
 const ThemeContext = createContext();
 
 // 2. Create the Provider (the machine that powers the teleporter)
 export function ThemeProvider({ children }) {
-  // We swapped useState out for our custom hook!
-  const [isDarkMode, setIsDarkMode] = useLocalStorage('theme-preference', false);
+  const [storedTheme, setStoredTheme] = useLocalStorage('theme-preference', 'system');
 
-  // Apply the dark class to the HTML tag so Tailwind works flawlessly globally!
+  // Normalize storedTheme (handle boolean values from previous version)
+  const themeMode = typeof storedTheme === 'boolean'
+    ? (storedTheme ? 'dark' : 'light')
+    : (storedTheme || 'system');
+
+  const [systemIsDark, setSystemIsDark] = useState(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const updateSystemTheme = (e) => {
+      setSystemIsDark(e.matches);
+    };
+    mediaQuery.addEventListener('change', updateSystemTheme);
+    return () => mediaQuery.removeEventListener('change', updateSystemTheme);
+  }, []);
+
+  const isDarkMode = themeMode === 'system' ? systemIsDark : themeMode === 'dark';
+
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -18,14 +39,16 @@ export function ThemeProvider({ children }) {
     }
   }, [isDarkMode]);
 
-  // A helper function to switch the theme
-  const toggleTheme = () => {
-    setIsDarkMode((prev) => !prev);
+  const setThemeMode = (mode) => {
+    setStoredTheme(mode);
   };
 
-  // We place our state and functions inside the teleporter's "value"
+  const toggleTheme = () => {
+    setStoredTheme(isDarkMode ? 'light' : 'dark');
+  };
+
   return (
-    <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
+    <ThemeContext.Provider value={{ isDarkMode, toggleTheme, themeMode, setThemeMode }}>
       {children}
     </ThemeContext.Provider>
   );
