@@ -74,6 +74,20 @@ export default function Sidebar({ isOpen, onClose }) {
                 Organizations
               </NavLink>
             </li>
+            <li>
+              <NavLink 
+                to="/settings" 
+                className={({ isActive }) => 
+                  `block px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                    isActive 
+                      ? "text-blue-700 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30" 
+                      : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/50"
+                  }`
+                }
+              >
+                Settings
+              </NavLink>
+            </li>
           </ul>
         </div>
       </aside>
