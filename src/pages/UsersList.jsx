@@ -169,13 +169,23 @@ export default function UsersList() {
         </Button>
       </div>
       
-      {/* Search Bar */}
-      <div className="w-full md:w-72 mb-6">
-        <Input 
-          placeholder="Search by name..." 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      {/* Search Bar & Summary */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="w-full md:w-72">
+          <Input 
+            placeholder="Search by name..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onClear={() => setSearchTerm('')}
+          />
+        </div>
+        
+        {/* Results Summary */}
+        {!isLoading && !error && filteredUsers.length > 0 && (
+          <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">
+            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredUsers.length)} of {filteredUsers.length} users
+          </div>
+        )}
       </div>
       
       {isLoading && (
@@ -198,7 +208,15 @@ export default function UsersList() {
               {users.length === 0 ? (
                 <p className="text-gray-500 dark:text-gray-400">No users exist in the system. Click "+ Add New User" to get started!</p>
               ) : (
-                <p className="text-gray-500 dark:text-gray-400">No users found matching "{searchTerm}"</p>
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <p className="text-gray-500 dark:text-gray-400">No users found matching "{searchTerm}"</p>
+                  <button 
+                    onClick={() => setSearchTerm('')}
+                    className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline focus:outline-none"
+                  >
+                    Clear Search
+                  </button>
+                </div>
               )}
             </div>
           ) : (
