@@ -33,7 +33,7 @@ export default function Dashboard() {
     <div>
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Overview Dashboard</h1>
 
-      {/* Map over the mock data and render a StatCard for each item! */}
+      {/* 2. Map over the mock data and render a StatCard for each item! */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
         {mockStats.map((stat) => (
           <StatCard
