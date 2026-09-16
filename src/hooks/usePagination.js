@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function usePagination(items, itemsPerPage) {
   // We ONLY store the current page number in state!
@@ -6,6 +6,13 @@ export default function usePagination(items, itemsPerPage) {
 
   // We mathematically derive the total pages on the fly!
   const totalPages = Math.ceil(items.length / itemsPerPage);
+
+  // 1. NEW: Snap back if we get stranded on an empty page!
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
 
   // We mathematically calculate which slice of the array to show!
   const startIndex = (currentPage - 1) * itemsPerPage;

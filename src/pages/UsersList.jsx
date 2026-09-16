@@ -195,7 +195,11 @@ export default function UsersList() {
         <>
           {filteredUsers.length === 0 ? (
             <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
-              <p className="text-gray-500 dark:text-gray-400">No users found matching "{searchTerm}"</p>
+              {users.length === 0 ? (
+                <p className="text-gray-500 dark:text-gray-400">No users exist in the system. Click "+ Add New User" to get started!</p>
+              ) : (
+                <p className="text-gray-500 dark:text-gray-400">No users found matching "{searchTerm}"</p>
+              )}
             </div>
           ) : (
             <>
