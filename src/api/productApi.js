@@ -78,3 +78,42 @@ export async function getProductsWithPagination(limit = 12, skip = 0) {
 export async function getProductsSorted(sortBy, order = "asc") {
   return await apiClient(`/products?sortBy=${sortBy}&order=${order}`);
 }
+
+/**
+ * 8. Add a new product (Simulated).
+ * 
+ * @param {Object} productData - The product data to create.
+ * @returns {Promise<Object>} Created product response.
+ */
+export async function addProduct(productData) {
+  return await apiClient('/products/add', {
+    method: 'POST',
+    body: JSON.stringify(productData),
+  });
+}
+
+/**
+ * 9. Update an existing product (Simulated).
+ * 
+ * @param {string|number} id - Product identifier.
+ * @param {Object} productData - Fields to update.
+ * @returns {Promise<Object>} Updated product response.
+ */
+export async function updateProduct(id, productData) {
+  return await apiClient(`/products/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(productData),
+  });
+}
+
+/**
+ * 10. Delete a product (Simulated).
+ * 
+ * @param {string|number} id - Product identifier.
+ * @returns {Promise<Object>} Deleted product response (isDeleted: true).
+ */
+export async function deleteProduct(id) {
+  return await apiClient(`/products/${id}`, {
+    method: 'DELETE',
+  });
+}

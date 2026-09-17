@@ -1,10 +1,10 @@
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import useLocalStorage from '../hooks/useLocalStorage';
+import { getUserById } from '../api/userApi';
 import Badge from '../components/ui/Badge';
+import Spinner from '../components/ui/Spinner';
 
-// Helper component to display a label and value pair consistently
 const DetailField = ({ label, value }) => {
-  // Determine if the value is empty
   const isEmpty = value === null || value === undefined || value === '';
   
   return (
@@ -24,20 +24,41 @@ const DetailField = ({ label, value }) => {
 export default function UserDetail() {
   const { id } = useParams();
   
-  // 1. Fetch the exact same local database used by the UsersList
-  const [users] = useLocalStorage('guidexr-users', []);
-  
-  // 2. Find the user by ID. 
-  // We use toString() just in case the URL parameter is a string but the data is an integer.
-  const user = users.find(u => u.id.toString() === id);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // 3. Handle the "Not Found" State
-  if (!user) {
+  useEffect(() => {
+    const fetchUser = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getUserById(id);
+        setUser(data);
+      } catch (err) {
+        setError(err.message || 'Failed to fetch user details.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUser();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto py-12 flex flex-col items-center justify-center">
+        <Spinner />
+        <p className="mt-4 text-gray-500">Loading user details...</p>
+      </div>
+    );
+  }
+
+  if (error || !user) {
     return (
       <div className="max-w-4xl mx-auto py-12 px-4 text-center">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">User Not Found</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-8">
-          The user you are looking for does not exist or has been deleted.
+          {error || "The user you are looking for does not exist or has been deleted."}
         </p>
         <Link 
           to="/users" 
@@ -49,19 +70,10 @@ export default function UserDetail() {
     );
   }
 
-  // Helper to determine status badge color
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'active': return 'success';
-      case 'inactive': return 'warning';
-      case 'suspended': return 'danger';
-      default: return 'gray';
-    }
-  };
-
-  // Helper to construct the full name gracefully
-  const fullName = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown User';
-
+  // DummyJSON provides image, firstName, lastName, email, phone, age, gender, username, etc.
+  const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown User';
+  const role = user.role || 'user';
+  
   return (
     <div className="max-w-5xl mx-auto pb-6">
       
@@ -76,10 +88,13 @@ export default function UserDetail() {
       <div className="bg-white dark:bg-gray-800 rounded-t-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6 border-b-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            {/* Avatar Placeholder */}
-            <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-2xl sm:text-3xl font-bold uppercase shadow-sm flex-shrink-0">
-              {fullName.charAt(0)}
-            </div>
+            {user.image ? (
+              <img src={user.image} alt={fullName} className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-gray-100 object-cover shadow-sm flex-shrink-0" />
+            ) : (
+              <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-2xl sm:text-3xl font-bold uppercase shadow-sm flex-shrink-0">
+                {user.firstName ? user.firstName.charAt(0) : '?'}
+              </div>
+            )}
             
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{fullName}</h1>
@@ -91,11 +106,8 @@ export default function UserDetail() {
           </div>
           
           <div className="flex flex-row md:flex-col items-start md:items-end gap-2">
-            <Badge variant={getStatusColor(user.status)}>
-              {user.status || 'Active'}
-            </Badge>
             <Badge variant="primary">
-              {user.role || 'Viewer'}
+              {role}
             </Badge>
           </div>
         </div>
@@ -114,23 +126,13 @@ export default function UserDetail() {
                 Personal Information
               </h3>
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3.5 sm:p-4 border border-gray-100 dark:border-gray-700/50">
-                <DetailField label="First Name" value={user.firstName || (user.name ? user.name.split(' ')[0] : '')} />
-                <DetailField label="Last Name" value={user.lastName || (user.name ? user.name.split(' ').slice(1).join(' ') : '')} />
+                <DetailField label="First Name" value={user.firstName} />
+                <DetailField label="Last Name" value={user.lastName} />
                 <DetailField label="Username" value={user.username} />
                 <DetailField label="Phone" value={user.phone} />
-                <DetailField label="Date of Birth" value={user.dob} />
+                <DetailField label="Age" value={user.age} />
                 <DetailField label="Gender" value={user.gender} />
-              </div>
-            </section>
-
-            <section>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2.5">
-                Location
-              </h3>
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3.5 sm:p-4 border border-gray-100 dark:border-gray-700/50">
-                <DetailField label="City" value={user.city || user.address?.city} />
-                <DetailField label="State / Province" value={user.state} />
-                <DetailField label="Country" value={user.country} />
+                <DetailField label="Birth Date" value={user.birthDate} />
               </div>
             </section>
 
@@ -138,41 +140,27 @@ export default function UserDetail() {
 
           {/* Column 2 */}
           <div className="space-y-5">
+
+            <section>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2.5">
+                Location
+              </h3>
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3.5 sm:p-4 border border-gray-100 dark:border-gray-700/50">
+                <DetailField label="Address" value={user.address?.address} />
+                <DetailField label="City" value={user.address?.city} />
+                <DetailField label="State / Province" value={user.address?.state} />
+                <DetailField label="Country" value={user.address?.country} />
+              </div>
+            </section>
             
             <section>
               <h3 className="text-base font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2.5">
                 Professional Information
               </h3>
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3.5 sm:p-4 border border-gray-100 dark:border-gray-700/50">
-                <DetailField label="Organization" value={user.organization || user.company?.name} />
-                <DetailField label="Job Title" value={user.jobTitle} />
-              </div>
-            </section>
-
-            <section>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2.5">
-                Security & Preferences
-              </h3>
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3.5 sm:p-4 border border-gray-100 dark:border-gray-700/50">
-                <DetailField 
-                  label="Email Notifications" 
-                  value={user.emailNotifications !== undefined ? (user.emailNotifications ? 'Enabled' : 'Disabled') : null} 
-                />
-                <DetailField 
-                  label="Two-Factor Auth" 
-                  value={user.twoFactorAuth !== undefined ? (user.twoFactorAuth ? 'Enabled' : 'Disabled') : null} 
-                />
-              </div>
-            </section>
-
-            <section>
-              <h3 className="text-base font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-1.5 mb-2.5">
-                Additional Notes
-              </h3>
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3.5 sm:p-4 border border-gray-100 dark:border-gray-700/50">
-                <p className="text-gray-900 dark:text-gray-100 text-sm whitespace-pre-wrap">
-                  {user.notes || <span className="text-gray-400 dark:text-gray-500 italic">Not provided</span>}
-                </p>
+                <DetailField label="Company" value={user.company?.name} />
+                <DetailField label="Department" value={user.company?.department} />
+                <DetailField label="Job Title" value={user.company?.title} />
               </div>
             </section>
 

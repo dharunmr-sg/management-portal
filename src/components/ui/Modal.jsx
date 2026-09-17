@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function Modal({
   isOpen,
@@ -77,23 +78,22 @@ export default function Modal({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-300"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/40 backdrop-blur-sm transition-opacity duration-300"
       onClick={onClose}
       role="presentation"
     >
       <div 
         ref={modalRef}
-        className={`bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full ${
+        className={`relative z-[10000] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full ${
           maxWidth || sizeClasses[size] || sizeClasses.xl
-        } max-h-[92vh] flex flex-col relative transition-all duration-300 ease-in-out my-auto`}
+        } max-h-[92vh] flex flex-col transition-all duration-300 ease-in-out my-auto`}
         onClick={(e) => e.stopPropagation()} 
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
       >
-        
         {/* Modal Header: Stays visible at top */}
         <div className="flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <h2 id="modal-title" className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
@@ -115,8 +115,8 @@ export default function Modal({
         <div className="overflow-y-auto px-5 sm:px-6 py-4 flex-1 overscroll-contain">
           {children}
         </div>
-
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

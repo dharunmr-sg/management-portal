@@ -2,6 +2,7 @@ import { useLocation } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useSidebar } from '../../context/SidebarContext';
 import { useProductContext } from '../../context/ProductContext';
+import { useHeaderContext } from '../../context/HeaderContext';
 
 const getPageTitle = (pathname) => {
   if (pathname === '/' || pathname.startsWith('/dashboard')) return 'Dashboard';
@@ -12,6 +13,8 @@ const getPageTitle = (pathname) => {
   if (pathname === '/settings' || pathname.startsWith('/settings')) return 'Settings';
   if (pathname.startsWith('/analytics')) return 'Dashboard';
   if (pathname.startsWith('/products')) return 'Products';
+  if (pathname.startsWith('/carts')) return 'Active Carts';
+  if (pathname.startsWith('/orders')) return 'Orders Dashboard';
   return 'Dashboard';
 };
 
@@ -19,6 +22,7 @@ export default function Navbar({ onMenuClick }) {
   const { isDarkMode, toggleTheme } = useTheme();
   const { isCollapsed, openMobile } = useSidebar();
   const { selectedProduct, setSelectedProduct } = useProductContext();
+  const { headerContent } = useHeaderContext();
   const location = useLocation();
   const pageTitle = getPageTitle(location.pathname);
 
@@ -68,7 +72,9 @@ export default function Navbar({ onMenuClick }) {
         {/* Content header section: positioned exactly above the main content area */}
         <div className="flex-1 flex items-center justify-between px-4 sm:px-5 md:px-6 max-w-7xl mx-auto w-full h-full">
           <div className="flex items-center min-w-0">
-            {location.pathname === '/products' && selectedProduct ? (
+            {headerContent ? (
+              headerContent
+            ) : location.pathname === '/products' && selectedProduct ? (
               <div className="flex items-center bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-full border border-blue-100 dark:border-blue-800 animate-fade-in truncate">
                 {selectedProduct.thumbnail ? (
                   <img 

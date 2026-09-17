@@ -1,11 +1,20 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useSidebar } from '../../context/SidebarContext';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Sidebar({ isOpen: propIsOpen, onClose: propOnClose }) {
   const { isCollapsed, toggleCollapse, isMobileOpen, closeMobile } = useSidebar();
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
 
   const isOpen = propIsOpen !== undefined ? propIsOpen : isMobileOpen;
   const handleClose = propOnClose || closeMobile;
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+    handleClose(); // Close sidebar on mobile
+  };
 
   const navItems = [
     {
@@ -23,6 +32,24 @@ export default function Sidebar({ isOpen: propIsOpen, onClose: propOnClose }) {
       icon: (
         <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+        </svg>
+      )
+    },
+    {
+      to: '/carts',
+      label: 'Carts',
+      icon: (
+        <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      )
+    },
+    {
+      to: '/orders',
+      label: 'Orders',
+      icon: (
+        <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         </svg>
       )
     },
@@ -139,8 +166,41 @@ export default function Sidebar({ isOpen: propIsOpen, onClose: propOnClose }) {
           </ul>
         </div>
 
+        {/* User Profile & Logout Section */}
+        <div className="mt-auto border-t border-gray-200 dark:border-gray-700 p-2.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className={`w-full flex items-center ${
+              isCollapsed ? 'md:justify-center md:px-0 px-3' : 'px-3'
+            } py-2.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors group relative`}
+          >
+            <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span
+              className={`whitespace-nowrap transition-all duration-200 ${
+                isCollapsed ? 'md:hidden ml-3' : 'ml-3'
+              }`}
+            >
+              Sign out ({user?.username || 'Account'})
+            </span>
+
+            {/* Floating Tooltip when Collapsed on Desktop/Tablet */}
+            {isCollapsed && (
+              <div
+                role="tooltip"
+                className="hidden md:group-hover:flex absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2.5 py-1.5 bg-gray-900 dark:bg-gray-700 text-white text-xs font-medium rounded-md shadow-lg whitespace-nowrap z-50 pointer-events-none items-center"
+              >
+                <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45" />
+                <span className="relative z-10">Sign out</span>
+              </div>
+            )}
+          </button>
+        </div>
+
         {/* Bottom-Aligned Collapse/Expand Control */}
-        <div className="mt-auto border-t border-gray-200 dark:border-gray-700 p-2.5 flex-shrink-0 hidden md:block">
+        <div className="border-t border-gray-200 dark:border-gray-700 p-2.5 flex-shrink-0 hidden md:block">
           <button
             type="button"
             onClick={toggleCollapse}

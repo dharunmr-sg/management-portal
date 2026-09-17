@@ -17,6 +17,17 @@ export async function getCarts() {
 }
 
 /**
+ * Fetch carts with pagination from the API.
+ * 
+ * @param {number} limit - Number of carts to return
+ * @param {number} skip - Number of carts to skip
+ * @returns {Promise<Object>} Object containing carts array, total, skip, limit.
+ */
+export async function getCartsWithPagination(limit, skip) {
+  return await apiClient(`/carts?limit=${limit}&skip=${skip}`);
+}
+
+/**
  * 2. Fetch a single cart by its unique ID.
  * 
  * @param {string|number} id - Cart identifier.
