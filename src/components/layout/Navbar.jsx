@@ -13,7 +13,6 @@ const getPageTitle = (pathname) => {
   if (pathname === '/settings' || pathname.startsWith('/settings')) return 'Settings';
   if (pathname.startsWith('/analytics')) return 'Dashboard';
   if (pathname.startsWith('/products')) return 'Products';
-  if (pathname.startsWith('/carts')) return 'Active Carts';
   if (pathname.startsWith('/orders')) return 'Orders Dashboard';
   return 'Dashboard';
 };

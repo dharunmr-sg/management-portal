@@ -13,16 +13,13 @@ export default function Dashboard() {
   // Raw API Data
   const [rawData, setRawData] = useState({
     products: [],
-    carts: [],
     totalUsersCount: 0,
-    totalProductsCount: 0,
-    totalOrdersCount: 0
+    totalProductsCount: 0
   });
 
   // Filter States
   const [categoryFilter, setCategoryFilter] = useState('All Categories');
   const [stockFilter, setStockFilter] = useState('All Statuses');
-  const [orderStatusFilter, setOrderStatusFilter] = useState('All Orders');
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
@@ -44,12 +41,7 @@ export default function Dashboard() {
   // Helpers
   const formatCurrency = (val) => `$${Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const getOrderStatus = (cartId) => {
-    if (cartId % 4 === 0) return { label: 'Delivered', variant: 'success' };
-    if (cartId % 3 === 0) return { label: 'Shipped', variant: 'brand' };
-    if (cartId % 5 === 0) return { label: 'Pending', variant: 'warning' };
-    return { label: 'Processing', variant: 'neutral' };
-  };
+
 
   const getStockStatus = (stock) => {
     if (stock === 0) return 'Out of Stock';
@@ -64,12 +56,11 @@ export default function Dashboard() {
     return ['All Categories', ...Array.from(cats)];
   }, [rawData.products]);
 
-  const hasActiveFilters = categoryFilter !== 'All Categories' || stockFilter !== 'All Statuses' || orderStatusFilter !== 'All Orders';
+  const hasActiveFilters = categoryFilter !== 'All Categories' || stockFilter !== 'All Statuses';
 
   const clearFilters = () => {
     setCategoryFilter('All Categories');
     setStockFilter('All Statuses');
-    setOrderStatusFilter('All Orders');
   };
 
   // --- Client Side Filtering ---
@@ -81,38 +72,14 @@ export default function Dashboard() {
     });
   }, [rawData.products, categoryFilter, stockFilter]);
 
-  const filteredCarts = useMemo(() => {
-    return rawData.carts.filter(c => {
-      const status = getOrderStatus(c.id).label;
-      return orderStatusFilter === 'All Orders' || status === orderStatusFilter;
-    });
-  }, [rawData.carts, orderStatusFilter]);
-
   // --- Aggregate KPIs ---
   const kpis = useMemo(() => {
-    let totalRevenue = 0;
-    let totalDiscountedValue = 0;
-    let totalItemsSold = 0;
-
-    filteredCarts.forEach(cart => {
-      totalRevenue += (cart.total || 0);
-      totalDiscountedValue += (cart.discountedTotal || 0);
-      totalItemsSold += (cart.totalQuantity || 0);
-    });
-
-    const averageOrderValue = filteredCarts.length > 0 ? (totalRevenue / filteredCarts.length) : 0;
-
     return {
       // If no filters are active, use global counts, otherwise use filtered array length
       productsCount: (categoryFilter !== 'All Categories' || stockFilter !== 'All Statuses') ? filteredProducts.length : rawData.totalProductsCount,
       usersCount: rawData.totalUsersCount, // Users aren't affected by these specific filters
-      ordersCount: orderStatusFilter !== 'All Orders' ? filteredCarts.length : rawData.totalOrdersCount,
-      totalRevenue,
-      totalDiscountedValue,
-      totalItemsSold,
-      averageOrderValue
     };
-  }, [filteredProducts, filteredCarts, rawData, categoryFilter, stockFilter, orderStatusFilter]);
+  }, [filteredProducts, rawData, categoryFilter, stockFilter]);
 
   // --- Chart Data Computations ---
   const inventoryStats = useMemo(() => {
@@ -140,9 +107,7 @@ export default function Dashboard() {
       .slice(0, 6); // Top 6
   }, [filteredProducts]);
 
-  const recentOrdersList = useMemo(() => {
-    return [...filteredCarts].sort((a, b) => b.id - a.id).slice(0, 6);
-  }, [filteredCarts]);
+
 
   const topProductsList = useMemo(() => {
     return [...filteredProducts].sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, 5);
@@ -205,16 +170,12 @@ export default function Dashboard() {
         <svg className="w-5 h-5 flex-shrink-0 mt-0.5 sm:mt-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <p>This dashboard utilizes DummyJSON mock data. Order statuses are simulated, and some analytics are mathematically calculated for demonstration purposes.</p>
+        <p>This dashboard utilizes DummyJSON mock data. Some analytics are mathematically calculated for demonstration purposes.</p>
       </div>
 
       {/* 2. KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         {[
-          { title: 'Total Revenue', value: formatCurrency(kpis.totalRevenue), color: 'text-emerald-600 dark:text-emerald-400' },
-          { title: 'Avg Order Val', value: formatCurrency(kpis.averageOrderValue), color: 'text-indigo-600 dark:text-indigo-400' },
-          { title: 'Total Orders', value: kpis.ordersCount.toLocaleString(), color: 'text-blue-600 dark:text-blue-400' },
-          { title: 'Items Sold', value: kpis.totalItemsSold.toLocaleString(), color: 'text-amber-600 dark:text-amber-500' },
           { title: 'Total Products', value: kpis.productsCount.toLocaleString(), color: 'text-gray-900 dark:text-white' },
           { title: 'Total Users', value: kpis.usersCount.toLocaleString(), color: 'text-gray-900 dark:text-white' }
         ].map((kpi, idx) => (
@@ -230,7 +191,7 @@ export default function Dashboard() {
       {/* 3. Filters */}
       <Card className="p-3.5 sm:p-4">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
             {/* Category */}
             <div>
               <label className="block text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
@@ -259,24 +220,6 @@ export default function Dashboard() {
                 <option value="In Stock">In Stock</option>
                 <option value="Low Stock">Low Stock</option>
                 <option value="Out of Stock">Out of Stock</option>
-              </select>
-            </div>
-
-            {/* Order Status */}
-            <div>
-              <label className="block text-[11px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
-                Order Status
-              </label>
-              <select
-                value={orderStatusFilter}
-                onChange={(e) => setOrderStatusFilter(e.target.value)}
-                className="w-full px-3 py-1.5 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-              >
-                <option value="All Orders">All Orders</option>
-                <option value="Pending">Pending</option>
-                <option value="Processing">Processing</option>
-                <option value="Shipped">Shipped</option>
-                <option value="Delivered">Delivered</option>
               </select>
             </div>
           </div>
@@ -364,57 +307,9 @@ export default function Dashboard() {
 
       </div>
 
-      {/* 5. Tables Row (Recent Orders & Product Overview) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* 5. Tables Row (Product Overview) */}
+      <div className="grid grid-cols-1 gap-4">
         
-        {/* Recent Orders */}
-        <Card className="p-0 overflow-hidden flex flex-col">
-          <div className="px-4 sm:px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/30">
-            <div>
-              <h2 className="text-base font-semibold text-gray-900 dark:text-white">Recent Orders</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Latest transactional carts</p>
-            </div>
-            <Link to="/orders" className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
-              Manage Orders
-            </Link>
-          </div>
-          <div className="overflow-x-auto flex-1">
-            <table className="w-full text-left border-collapse min-w-[500px]">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Order ID</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Qty</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {recentOrdersList.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">No orders match filters.</td>
-                  </tr>
-                ) : (
-                  recentOrdersList.map((order) => {
-                    const status = getOrderStatus(order.id);
-                    return (
-                      <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">#{order.id}</td>
-                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">User {order.userId}</td>
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-gray-100">{formatCurrency(order.total)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{order.totalQuantity} items</td>
-                        <td className="px-4 py-3 text-sm">
-                          <Badge variant={status.variant}>{status.label}</Badge>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
         {/* Top Products */}
         <Card className="p-0 overflow-hidden flex flex-col">
           <div className="px-4 sm:px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/30">

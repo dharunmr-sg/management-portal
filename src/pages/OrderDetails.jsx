@@ -1,18 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useHeaderContext } from '../context/HeaderContext';
-import { getCartById } from '../api/cartApi';
+import { getOrderById } from '../api/orderApi';
 import Badge from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
 
-// Helper to determine mock status
-const getSimulatedStatus = (cartId) => {
-  if (!cartId) return 'Pending';
-  if (cartId % 4 === 0) return 'Delivered';
-  if (cartId % 3 === 0) return 'Shipped';
-  if (cartId % 2 === 0) return 'Processing';
-  return 'Pending';
-};
+
 
 const getStatusBadgeColor = (status) => {
   switch (status) {
@@ -35,11 +28,8 @@ export default function OrderDetails() {
       setLoading(true);
       setError(null);
       try {
-        const data = await getCartById(id);
-        setOrder({
-          ...data,
-          status: getSimulatedStatus(data.id)
-        });
+        const data = await getOrderById(id);
+        setOrder(data);
       } catch (err) {
         setError(err.message || 'Failed to fetch order details.');
       } finally {

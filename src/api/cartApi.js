@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import apiClient from './apiClient';
 
 /**
  * Cart API Service
@@ -13,7 +13,7 @@ import { apiClient } from './apiClient';
  * @returns {Promise<Object>} Object containing carts array, total, skip, limit.
  */
 export async function getCarts() {
-  return await apiClient('/carts');
+  return await apiClient.get('/carts');
 }
 
 /**
@@ -24,7 +24,7 @@ export async function getCarts() {
  * @returns {Promise<Object>} Object containing carts array, total, skip, limit.
  */
 export async function getCartsWithPagination(limit, skip) {
-  return await apiClient(`/carts?limit=${limit}&skip=${skip}`);
+  return await apiClient.get(`/carts?limit=${limit}&skip=${skip}`);
 }
 
 /**
@@ -34,7 +34,7 @@ export async function getCartsWithPagination(limit, skip) {
  * @returns {Promise<Object>} Cart details object including products list.
  */
 export async function getCartById(id) {
-  return await apiClient(`/carts/${id}`);
+  return await apiClient.get(`/carts/${id}`);
 }
 
 /**
@@ -44,7 +44,7 @@ export async function getCartById(id) {
  * @returns {Promise<Object>} Object containing carts for the specified user.
  */
 export async function getCartsByUserId(userId) {
-  return await apiClient(`/carts/user/${userId}`);
+  return await apiClient.get(`/carts/user/${userId}`);
 }
 
 /**
@@ -54,13 +54,7 @@ export async function getCartsByUserId(userId) {
  * @returns {Promise<Object>} Created cart object returned from the API.
  */
 export async function addCart(cartData) {
-  return await apiClient('/carts/add', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(cartData),
-  });
+  return await apiClient.post('/carts/add', cartData);
 }
 
 /**
@@ -71,13 +65,7 @@ export async function addCart(cartData) {
  * @returns {Promise<Object>} Updated cart object returned from the API.
  */
 export async function updateCart(id, cartData) {
-  return await apiClient(`/carts/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(cartData),
-  });
+  return await apiClient.put(`/carts/${id}`, cartData);
 }
 
 /**
@@ -87,7 +75,5 @@ export async function updateCart(id, cartData) {
  * @returns {Promise<Object>} Deleted cart confirmation object.
  */
 export async function deleteCart(id) {
-  return await apiClient(`/carts/${id}`, {
-    method: 'DELETE',
-  });
+  return await apiClient.delete(`/carts/${id}`);
 }

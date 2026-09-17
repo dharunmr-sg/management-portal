@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import apiClient from './apiClient';
 
 /**
  * Auth API Service
@@ -15,11 +15,5 @@ import { apiClient } from './apiClient';
  * @returns {Promise<Object>} The API response containing user details and tokens.
  */
 export async function loginUser(credentials) {
-  return await apiClient('/user/login', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(credentials),
-  });
+  return await apiClient.post('/user/login', credentials);
 }

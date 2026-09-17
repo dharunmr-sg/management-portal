@@ -9,8 +9,6 @@ import OrganizationDetail from './pages/OrganizationDetail';
 import Settings from './pages/Settings';
 import Products from './pages/Products';
 import ProductDetails from './pages/ProductDetails';
-import Carts from './pages/Carts';
-import CartDetails from './pages/CartDetails';
 import Orders from './pages/Orders';
 import OrderDetails from './pages/OrderDetails';
 import NotFound from './pages/NotFound';
@@ -47,8 +45,6 @@ function AppContent() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/products/:id" element={<ProductDetails />} />
-                <Route path="/carts" element={<Carts />} />
-                <Route path="/carts/:id" element={<CartDetails />} />
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/orders/:id" element={<OrderDetails />} />
                 <Route path="/analytics" element={<Navigate to="/dashboard" replace />} />

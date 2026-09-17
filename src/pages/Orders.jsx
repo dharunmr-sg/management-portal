@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCartsWithPagination } from '../api/cartApi';
+import { getOrders } from '../api/orderApi';
 import Spinner from '../components/ui/Spinner';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -11,14 +11,7 @@ import FilterBar from '../components/filters/FilterBar';
 
 const PAGE_SIZE = 10;
 
-// Helper to determine mock status
-const getSimulatedStatus = (cartId) => {
-  if (!cartId) return 'Pending';
-  if (cartId % 4 === 0) return 'Delivered';
-  if (cartId % 3 === 0) return 'Shipped';
-  if (cartId % 2 === 0) return 'Processing';
-  return 'Pending';
-};
+
 
 const getStatusBadgeColor = (status) => {
   switch (status) {
@@ -45,13 +38,8 @@ export default function Orders() {
     setLoading(true);
     setError(null);
     try {
-      const data = await getCartsWithPagination(150, 0);
-      // Map carts to orders
-      const fetchedOrders = (data.carts || []).map(cart => ({
-        ...cart,
-        status: getSimulatedStatus(cart.id)
-      }));
-      setOrders(fetchedOrders);
+      const data = await getOrders(150, 0);
+      setOrders(data.orders || []);
     } catch (err) {
       setError(err.message || 'Failed to fetch orders.');
     } finally {

@@ -1,4 +1,4 @@
-import { apiClient } from './apiClient';
+import apiClient from './apiClient';
 
 /**
  * Product API Service
@@ -13,7 +13,7 @@ import { apiClient } from './apiClient';
  * @returns {Promise<Object>} Object containing products array, total, skip, limit.
  */
 export async function getProducts() {
-  return await apiClient('/products');
+  return await apiClient.get('/products');
 }
 
 /**
@@ -23,7 +23,7 @@ export async function getProducts() {
  * @returns {Promise<Object>} Detailed product object.
  */
 export async function getProductById(id) {
-  return await apiClient(`/products/${id}`);
+  return await apiClient.get(`/products/${id}`);
 }
 
 /**
@@ -34,7 +34,7 @@ export async function getProductById(id) {
  */
 export async function searchProducts(query) {
   const encodedQuery = encodeURIComponent(query);
-  return await apiClient(`/products/search?q=${encodedQuery}`);
+  return await apiClient.get(`/products/search?q=${encodedQuery}`);
 }
 
 /**
@@ -43,7 +43,7 @@ export async function searchProducts(query) {
  * @returns {Promise<Array<string>>} Array of category name strings.
  */
 export async function getProductCategories() {
-  return await apiClient('/products/category-list');
+  return await apiClient.get('/products/category-list');
 }
 
 /**
@@ -54,7 +54,7 @@ export async function getProductCategories() {
  */
 export async function getProductsByCategory(category) {
   const encodedCategory = encodeURIComponent(category);
-  return await apiClient(`/products/category/${encodedCategory}`);
+  return await apiClient.get(`/products/category/${encodedCategory}`);
 }
 
 /**
@@ -65,7 +65,7 @@ export async function getProductsByCategory(category) {
  * @returns {Promise<Object>} Paginated products response.
  */
 export async function getProductsWithPagination(limit = 12, skip = 0) {
-  return await apiClient(`/products?limit=${limit}&skip=${skip}`);
+  return await apiClient.get(`/products?limit=${limit}&skip=${skip}`);
 }
 
 /**
@@ -76,7 +76,7 @@ export async function getProductsWithPagination(limit = 12, skip = 0) {
  * @returns {Promise<Object>} Sorted products response.
  */
 export async function getProductsSorted(sortBy, order = "asc") {
-  return await apiClient(`/products?sortBy=${sortBy}&order=${order}`);
+  return await apiClient.get(`/products?sortBy=${sortBy}&order=${order}`);
 }
 
 /**
@@ -86,10 +86,7 @@ export async function getProductsSorted(sortBy, order = "asc") {
  * @returns {Promise<Object>} Created product response.
  */
 export async function addProduct(productData) {
-  return await apiClient('/products/add', {
-    method: 'POST',
-    body: JSON.stringify(productData),
-  });
+  return await apiClient.post('/products/add', productData);
 }
 
 /**
@@ -100,10 +97,7 @@ export async function addProduct(productData) {
  * @returns {Promise<Object>} Updated product response.
  */
 export async function updateProduct(id, productData) {
-  return await apiClient(`/products/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(productData),
-  });
+  return await apiClient.put(`/products/${id}`, productData);
 }
 
 /**
@@ -113,7 +107,5 @@ export async function updateProduct(id, productData) {
  * @returns {Promise<Object>} Deleted product response (isDeleted: true).
  */
 export async function deleteProduct(id) {
-  return await apiClient(`/products/${id}`, {
-    method: 'DELETE',
-  });
+  return await apiClient.delete(`/products/${id}`);
 }
