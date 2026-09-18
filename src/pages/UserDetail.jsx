@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getUserById } from '../api/userApi';
+import { useDataSource } from '../context/DataSourceContext';
+import { getUnifiedUserById } from '../api/unifiedUserApi';
 import Badge from '../components/ui/Badge';
 import Spinner from '../components/ui/Spinner';
 
@@ -23,6 +24,7 @@ const DetailField = ({ label, value }) => {
 
 export default function UserDetail() {
   const { id } = useParams();
+  const { dataSource } = useDataSource();
   
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -33,7 +35,7 @@ export default function UserDetail() {
       setLoading(true);
       setError(null);
       try {
-        const data = await getUserById(id);
+        const data = await getUnifiedUserById(dataSource, id);
         setUser(data);
       } catch (err) {
         setError(err.message || 'Failed to fetch user details.');
@@ -42,7 +44,7 @@ export default function UserDetail() {
       }
     };
     fetchUser();
-  }, [id]);
+  }, [id, dataSource]);
 
   if (loading) {
     return (

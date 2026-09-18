@@ -1,136 +1,115 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getProductsWithPagination, searchProducts, addProduct, updateProduct, deleteProduct } from '../api/productApi';
+import { getUnifiedProducts, createUnifiedProduct, updateUnifiedProduct, deleteUnifiedProduct, bulkDeleteUnifiedProducts } from '../api/unifiedProductApi';
+import { importProductsCSV } from '../api/importApi';
+import { useDataSource } from '../context/DataSourceContext';
 import { useToast } from '../context/ToastContext';
 import Spinner from '../components/ui/Spinner';
 import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
 import Modal from '../components/ui/Modal';
-import ProductForm from '../components/products/ProductForm';
 import Pagination from '../components/ui/Pagination';
-import FilterBar from '../components/filters/FilterBar';
-import FilterSelect from '../components/filters/FilterSelect';
-import useDebounce from '../hooks/useDebounce';
+import ProductForm from '../components/products/ProductForm';
+import CsvImportModal from '../components/import/CsvImportModal';
 
-const PAGE_SIZE = 12;
+// Helper custom hook for debouncing
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 export default function Products() {
   const navigate = useNavigate();
-  // Core state management for API data, status
+  const { dataSource } = useDataSource();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const { showToast } = useToast();
 
-  // Search and Filter States
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('All');
-  const [stockFilter, setStockFilter] = useState('All');
-  const [priceFilter, setPriceFilter] = useState('All');
-  const [ratingFilter, setRatingFilter] = useState('All');
-
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
-
-  // CRUD Modals State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [editProductItem, setEditProductItem] = useState(null);
   const [deleteProductItem, setDeleteProductItem] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
 
-  /**
-   * Fetch a large batch of products from DummyJSON to allow robust client-side filtering.
-   */
+  const [query, setQuery] = useState({
+    page: 1,
+    limit: 10,
+    search: '',
+    category: '',
+    availability_status: '',
+    sortBy: 'id',
+    order: 'desc'
+  });
+  const [paginationInfo, setPaginationInfo] = useState({ total: 0, totalPages: 1 });
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 500);
+
+  useEffect(() => {
+    setQuery(prev => ({ ...prev, search: debouncedSearch, page: 1 }));
+  }, [debouncedSearch]);
+
+  // Reset query on data source change
+  useEffect(() => {
+    setQuery({ page: 1, limit: 10, search: '', category: '', availability_status: '', sortBy: 'id', order: 'desc' });
+    setSearchInput('');
+    setSelectedIds(new Set());
+  }, [dataSource]);
+
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      if (debouncedSearchTerm) {
-        const data = await searchProducts(debouncedSearchTerm);
-        setProducts(data.products || []);
+      const response = await getUnifiedProducts(dataSource, query);
+      // Depending on source, it could be the raw array or an object
+      if (response && response.data) {
+        setProducts(response.data);
+        setPaginationInfo(response.pagination || { total: 0, totalPages: 1 });
+      } else if (Array.isArray(response)) {
+        setProducts(response);
+        setPaginationInfo({ total: response.length, totalPages: 1 });
       } else {
-        // Fetch up to 150 products so client-side filters have enough data to work with
-        const data = await getProductsWithPagination(150, 0);
-        setProducts(data.products || []);
+        setProducts([]);
+        setPaginationInfo({ total: 0, totalPages: 1 });
       }
+      setSelectedIds(new Set());
     } catch (err) {
-      setError(err.message || 'Failed to fetch products. Please check your connection and try again.');
+      if (dataSource === 'local') {
+        setError('Unable to connect to the local database server. Please make sure the backend is running.');
+      } else {
+        setError(err.message || 'Failed to fetch products from external API.');
+      }
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearchTerm]);
+  }, [dataSource, query]);
 
-  // Trigger API fetch whenever search query changes
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
-  // Reset pagination when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, categoryFilter, stockFilter, priceFilter, ratingFilter]);
-
-  // Dynamic Categories from payload
-  const uniqueCategories = useMemo(() => {
-    const categories = new Set(products.map(p => p.category).filter(Boolean));
-    return Array.from(categories).sort();
-  }, [products]);
-
-  // Client-Side Filtering
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      // 1. Category
-      if (categoryFilter !== 'All' && p.category !== categoryFilter) return false;
-
-      // 2. Stock
-      const stock = p.stock || 0;
-      if (stockFilter === 'In Stock' && stock <= 10) return false;
-      if (stockFilter === 'Low Stock' && (stock === 0 || stock > 10)) return false;
-      if (stockFilter === 'Out of Stock' && stock > 0) return false;
-
-      // 3. Price
-      const price = p.price || 0;
-      if (priceFilter === 'Under $50' && price >= 50) return false;
-      if (priceFilter === '$50 - $100' && (price < 50 || price > 100)) return false;
-      if (priceFilter === 'Over $100' && price <= 100) return false;
-
-      // 4. Rating
-      const rating = p.rating || 0;
-      if (ratingFilter === '4.5 & up' && rating < 4.5) return false;
-      if (ratingFilter === '4.0 & up' && rating < 4.0) return false;
-      if (ratingFilter === '3.0 & up' && rating < 3.0) return false;
-
-      return true;
-    });
-  }, [products, categoryFilter, stockFilter, priceFilter, ratingFilter]);
-
-  // Client-Side Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
-  const paginatedProducts = useMemo(() => {
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    return filteredProducts.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [filteredProducts, currentPage]);
-
-  const hasActiveFilters = searchTerm !== '' || categoryFilter !== 'All' || stockFilter !== 'All' || priceFilter !== 'All' || ratingFilter !== 'All';
-
-  const handleClearFilters = () => {
-    setSearchTerm('');
-    setCategoryFilter('All');
-    setStockFilter('All');
-    setPriceFilter('All');
-    setRatingFilter('All');
-  };
-
-  // CRUD Handlers
   const handleAddSubmit = async (data) => {
     setIsSubmitting(true);
     try {
-      const newProduct = await addProduct(data);
-      setProducts(prev => [newProduct, ...prev]);
-      showToast('Product added successfully!', 'success');
+      await createUnifiedProduct(dataSource, data);
+      
+      if (dataSource === 'api') {
+        showToast('Product added successfully! (Mock API: Changes will not persist)', 'success');
+      } else {
+        showToast('Product added successfully!', 'success');
+      }
       setIsAddModalOpen(false);
+      fetchProducts(); // Refresh list to get pagination correct
     } catch (err) {
       showToast(err.message || 'Failed to add product.', 'error');
     } finally {
@@ -141,10 +120,15 @@ export default function Products() {
   const handleEditSubmit = async (data) => {
     setIsSubmitting(true);
     try {
-      const updatedProduct = await updateProduct(editProductItem.id, data);
-      setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
-      showToast('Product updated successfully!', 'success');
+      await updateUnifiedProduct(dataSource, editProductItem.id, data);
+      
+      if (dataSource === 'api') {
+        showToast('Product updated successfully! (Mock API: Changes will not persist)', 'success');
+      } else {
+        showToast('Product updated successfully!', 'success');
+      }
       setEditProductItem(null);
+      fetchProducts();
     } catch (err) {
       showToast(err.message || 'Failed to update product.', 'error');
     } finally {
@@ -155,10 +139,15 @@ export default function Products() {
   const handleDeleteConfirm = async () => {
     setIsSubmitting(true);
     try {
-      await deleteProduct(deleteProductItem.id);
-      setProducts(prev => prev.filter(p => p.id !== deleteProductItem.id));
-      showToast('Product deleted successfully!', 'success');
+      await deleteUnifiedProduct(dataSource, deleteProductItem.id);
+      
+      if (dataSource === 'api') {
+        showToast('Product deleted successfully! (Mock API: Changes will not persist)', 'success');
+      } else {
+        showToast('Product deleted successfully!', 'success');
+      }
       setDeleteProductItem(null);
+      fetchProducts();
     } catch (err) {
       showToast(err.message || 'Failed to delete product.', 'error');
     } finally {
@@ -166,7 +155,43 @@ export default function Products() {
     }
   };
 
-  // Helper for category badge styling
+  const handleBulkDeleteConfirm = async () => {
+    setIsBulkDeleting(true);
+    try {
+      await bulkDeleteUnifiedProducts(dataSource, Array.from(selectedIds));
+      if (dataSource === 'api') {
+        showToast('Products deleted successfully! (Mock API)', 'success');
+      } else {
+        showToast('Products deleted successfully!', 'success');
+      }
+      setSelectedIds(new Set());
+      setIsBulkDeleteModalOpen(false);
+      fetchProducts();
+    } catch (err) {
+      showToast(err.message || 'Failed to delete products.', 'error');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === products.length && products.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(products.map(p => p.id)));
+    }
+  };
+
+  const toggleSelectOne = (id) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
   const getCategoryVariant = (category) => {
     const categoryLower = (category || '').toLowerCase();
     if (categoryLower.includes('beauty')) return 'warning';
@@ -178,66 +203,117 @@ export default function Products() {
 
   return (
     <div className="space-y-6 relative">
-      {/* Filter Bar */}
-      <FilterBar
-        onClear={handleClearFilters}
-        showClear={hasActiveFilters}
-        actionButton={
-          <Button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2 text-sm !px-4 h-[38px]">
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add Product
-          </Button>
-        }
-      >
-        <div className="w-full md:flex-1 md:min-w-[250px]">
-          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider">
-            Search
-          </label>
-          <Input
-            placeholder="Search by name, brand, keyword..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onClear={() => setSearchTerm('')}
-          />
-        </div>
-        <FilterSelect
-          label="Category"
-          value={categoryFilter}
-          onChange={setCategoryFilter}
-          options={uniqueCategories}
-          defaultLabel="All Categories"
-        />
-        <FilterSelect
-          label="Inventory Status"
-          value={stockFilter}
-          onChange={setStockFilter}
-          options={["In Stock", "Low Stock", "Out of Stock"]}
-          defaultLabel="All Statuses"
-        />
-        <FilterSelect
-          label="Price Range"
-          value={priceFilter}
-          onChange={setPriceFilter}
-          options={["Under $50", "$50 - $100", "Over $100"]}
-          defaultLabel="All Prices"
-        />
-        <FilterSelect
-          label="Rating"
-          value={ratingFilter}
-          onChange={setRatingFilter}
-          options={["4.5 & up", "4.0 & up", "3.0 & up"]}
-          defaultLabel="All Ratings"
-        />
-      </FilterBar>
 
-      {/* Content Area: Loading / Error / Empty / Table */}
+
+      {/* Action Row */}
+      <div className="flex items-center gap-4">
+        {/* Filter Bar */}
+        <div className="flex-1 bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 flex items-center gap-4 overflow-x-auto">
+          <div className="w-64 flex-shrink-0 relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm dark:text-white"
+              placeholder="Search products..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+          </div>
+          
+          <div className="flex-1 flex items-center gap-3 justify-end min-w-max">
+            <select
+              value={query.category}
+              onChange={(e) => setQuery(p => ({ ...p, category: e.target.value, page: 1 }))}
+              className="block pl-3 pr-10 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">All Categories</option>
+              <option value="beauty">Beauty</option>
+              <option value="fragrances">Fragrances</option>
+              <option value="furniture">Furniture</option>
+              <option value="groceries">Groceries</option>
+              <option value="laptops">Laptops</option>
+              <option value="smartphones">Smartphones</option>
+              <option value="skincare">Skincare</option>
+            </select>
+            <select
+              value={query.availability_status}
+              onChange={(e) => setQuery(p => ({ ...p, availability_status: e.target.value, page: 1 }))}
+              className="block pl-3 pr-10 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">All Statuses</option>
+              <option value="In Stock">In Stock</option>
+              <option value="Low Stock">Low Stock</option>
+              <option value="Out of Stock">Out of Stock</option>
+            </select>
+            <select
+              value={query.sortBy}
+              onChange={(e) => setQuery(p => ({ ...p, sortBy: e.target.value }))}
+              className="block pl-3 pr-10 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="id">Sort by ID</option>
+              <option value="title">Sort by Name</option>
+              <option value="price">Sort by Price</option>
+              <option value="stock">Sort by Stock</option>
+            </select>
+            <select
+              value={query.order}
+              onChange={(e) => setQuery(p => ({ ...p, order: e.target.value }))}
+              className="block pl-3 pr-10 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="desc">Descending</option>
+              <option value="asc">Ascending</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Buttons — only in Local DB mode */}
+        {dataSource === 'local' && (
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-2 text-sm h-10 px-3 !bg-emerald-600 hover:!bg-emerald-700 dark:!bg-emerald-600 dark:hover:!bg-emerald-700"
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              <span className="whitespace-nowrap">Import CSV</span>
+            </Button>
+            <Button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-2 text-sm h-10 px-3"
+            >
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span className="whitespace-nowrap">Add Product</span>
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {selectedIds.size > 0 && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 px-4 py-3 rounded-lg flex items-center justify-between border border-blue-100 dark:border-blue-800/50">
+          <span className="text-sm font-medium">{selectedIds.size} products selected</span>
+          <Button
+            onClick={() => setIsBulkDeleteModalOpen(true)}
+            className="!py-1 !px-3 text-xs !bg-red-100 !text-red-700 hover:!bg-red-200 dark:!bg-red-900/40 dark:!text-red-400 border-none shadow-none"
+          >
+            Delete Selected
+          </Button>
+        </div>
+      )}
+
+      {/* Content Area */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
           <Spinner />
           <p className="mt-4 text-sm font-medium text-gray-500 dark:text-gray-400">
-            Loading products from API...
+            {dataSource === 'local' ? 'Loading products from local backend...' : 'Loading products from external API...'}
           </p>
         </div>
       ) : error ? (
@@ -254,20 +330,17 @@ export default function Products() {
             {error}
           </p>
           <Button onClick={fetchProducts} className="inline-flex items-center gap-2 text-sm">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
             Retry Request
           </Button>
         </div>
-      ) : filteredProducts.length === 0 ? (
+      ) : products.length === 0 ? (
         <EmptyState
-          title="No products match your filters"
-          description="Try adjusting your search criteria or resetting filters to see results."
+          title={searchInput ? "No products match your search" : "No products found"}
+          description={searchInput ? "Try adjusting your filters or search term." : "There are no products to display yet."}
         >
-          {hasActiveFilters && (
-            <Button onClick={handleClearFilters} className="text-xs !py-1.5 !px-3">
-              Clear All Filters
+          {!searchInput && (
+            <Button onClick={() => setIsAddModalOpen(true)} className="text-xs !py-1.5 !px-3">
+              Add Your First Product
             </Button>
           )}
         </EmptyState>
@@ -277,6 +350,14 @@ export default function Products() {
             <table className="w-full min-w-[760px] divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-800/50">
                 <tr>
+                  <th scope="col" className="w-12 px-4 py-3">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+                      checked={selectedIds.size === products.length && products.length > 0}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
                   <th scope="col" className="w-16 px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     ID
                   </th>
@@ -293,7 +374,7 @@ export default function Products() {
                     Stock
                   </th>
                   <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Rating
+                    Created
                   </th>
                   <th scope="col" className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     <span className="sr-only">Actions</span>
@@ -301,28 +382,34 @@ export default function Products() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
-                {paginatedProducts.map((product) => {
+                {products.map((product) => {
                   const imageSrc = product.thumbnail || (product.images && product.images[0]);
+                  const isSelected = selectedIds.has(product.id);
                   return (
                     <tr
                       key={product.id}
+                      className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
                       onClick={() => navigate(`/products/${product.id}`)}
-                      className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                      title="Click to view details"
                     >
-                      {/* ID */}
+                      <td className="px-4 py-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+                          checked={selectedIds.has(product.id)}
+                          onChange={() => toggleSelectOne(product.id)}
+                        />
+                      </td>
                       <td className="px-4 py-3 whitespace-nowrap text-xs font-mono text-gray-500 dark:text-gray-400">
                         #{product.id}
                       </td>
 
-                      {/* Product Thumbnail + Title */}
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-3">
                           {imageSrc ? (
                             <img
                               src={imageSrc}
                               alt={product.title}
-                              className="h-10 w-10 rounded-md object-cover bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-700 flex-shrink-0 group-hover:opacity-80 transition-opacity"
+                              className="h-10 w-10 rounded-md object-cover bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-700 flex-shrink-0"
                               loading="lazy"
                             />
                           ) : (
@@ -331,7 +418,7 @@ export default function Products() {
                             </div>
                           )}
                           <div className="min-w-0">
-                            <span className="block text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline truncate max-w-xs sm:max-w-sm">
+                            <span className="block text-sm font-medium text-blue-600 dark:text-blue-400 truncate max-w-xs sm:max-w-sm">
                               {product.title}
                             </span>
                             {product.brand && (
@@ -343,19 +430,16 @@ export default function Products() {
                         </div>
                       </td>
 
-                      {/* Category */}
                       <td className="px-4 py-3 whitespace-nowrap text-sm">
                         <Badge variant={getCategoryVariant(product.category)}>
-                          {product.category}
+                          {product.category || 'N/A'}
                         </Badge>
                       </td>
 
-                      {/* Price */}
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
                         ${Number(product.price).toFixed(2)}
                       </td>
 
-                      {/* Stock */}
                       <td className="px-4 py-3 whitespace-nowrap text-sm">
                         <span
                           className={`text-xs font-medium px-2 py-0.5 rounded-full ${product.stock > 10
@@ -369,28 +453,12 @@ export default function Products() {
                         </span>
                       </td>
 
-                      {/* Rating */}
-                      <td className="px-4 py-3 whitespace-nowrap text-sm">
-                        <div className="flex items-center text-xs font-semibold text-amber-500 dark:text-amber-400">
-                          <svg className="w-4 h-4 fill-current mr-1" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                          <span>{product.rating}</span>
-                        </div>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                        {product.created_at ? new Date(product.created_at).toLocaleDateString() : 'N/A'}
                       </td>
 
-                      {/* Actions */}
-                      <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-2">
-                          <Button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/products/${product.id}`);
-                            }}
-                            className="!py-1 !px-2.5 text-xs !bg-blue-50 !text-blue-600 hover:!bg-blue-100 dark:!bg-blue-900/30 dark:!text-blue-400 dark:hover:!bg-blue-900/50 shadow-sm border border-blue-200 dark:border-blue-800"
-                          >
-                            View
-                          </Button>
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -417,14 +485,12 @@ export default function Products() {
               </tbody>
             </table>
           </div>
-
           <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            isLoading={loading}
-            totalItems={filteredProducts.length}
-            pageSize={PAGE_SIZE}
+            currentPage={query.page}
+            totalPages={paginationInfo.totalPages}
+            totalItems={paginationInfo.total}
+            pageSize={query.limit}
+            onPageChange={(page) => setQuery(p => ({ ...p, page }))}
           />
         </div>
       )}
@@ -497,6 +563,51 @@ export default function Products() {
           </div>
         </div>
       </Modal>
+
+      {/* Bulk Delete Modal */}
+      <Modal
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => !isBulkDeleting && setIsBulkDeleteModalOpen(false)}
+        title="Delete Multiple Products"
+        size="sm"
+      >
+        <div className="space-y-4 text-center">
+          <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 mx-auto flex items-center justify-center">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-gray-700 dark:text-gray-300">
+              Are you sure you want to delete <span className="font-semibold">{selectedIds.size}</span> products?
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">This action cannot be undone.</p>
+          </div>
+          <div className="flex justify-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button
+              onClick={() => setIsBulkDeleteModalOpen(false)}
+              disabled={isBulkDeleting}
+              className="!bg-gray-100 hover:!bg-gray-200 dark:!bg-gray-700 dark:hover:!bg-gray-600 !text-gray-700 dark:!text-gray-200"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkDeleteConfirm}
+              disabled={isBulkDeleting}
+              className="!bg-red-600 hover:!bg-red-700 !text-white"
+            >
+              {isBulkDeleting ? 'Deleting...' : 'Delete Products'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+      <CsvImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImport={importProductsCSV}
+        entityName="Products"
+        onSuccess={fetchProducts}
+      />
 
     </div>
   );

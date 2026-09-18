@@ -18,6 +18,7 @@ import PageContainer from './components/layout/PageContainer';
 import { SidebarProvider } from './context/SidebarContext';
 import { ProductProvider } from './context/ProductContext';
 import { HeaderProvider } from './context/HeaderContext';
+import { DataSourceProvider } from './context/DataSourceContext';
 
 function AppContent() {
   const location = useLocation();
@@ -68,12 +69,14 @@ function AppContent() {
 
 export default function App() {
   return (
-    <SidebarProvider>
-      <ProductProvider>
-        <HeaderProvider>
-          <AppContent />
-        </HeaderProvider>
-      </ProductProvider>
-    </SidebarProvider>
+    <DataSourceProvider>
+      <SidebarProvider>
+        <ProductProvider>
+          <HeaderProvider>
+            <AppContent />
+          </HeaderProvider>
+        </ProductProvider>
+      </SidebarProvider>
+    </DataSourceProvider>
   );
 }

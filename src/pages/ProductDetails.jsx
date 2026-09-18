@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useHeaderContext } from '../context/HeaderContext';
-import { getProductById } from '../api/productApi';
+import { useDataSource } from '../context/DataSourceContext';
+import { getUnifiedProductById } from '../api/unifiedProductApi';
 import Spinner from '../components/ui/Spinner';
 import Badge from '../components/ui/Badge';
 
@@ -19,6 +20,7 @@ const DetailRow = ({ label, value }) => {
 
 export default function ProductDetails() {
   const { id } = useParams();
+  const { dataSource } = useDataSource();
   
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -30,7 +32,7 @@ export default function ProductDetails() {
       setLoading(true);
       setError(null);
       try {
-        const data = await getProductById(id);
+        const data = await getUnifiedProductById(dataSource, id);
         setProduct(data);
         // Set initial image
         if (data.images && data.images.length > 0) {
@@ -45,7 +47,7 @@ export default function ProductDetails() {
       }
     };
     fetchProduct();
-  }, [id]);
+  }, [id, dataSource]);
 
   const { setHeaderContent } = useHeaderContext();
 

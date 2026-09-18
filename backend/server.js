@@ -2,9 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import db from './database/database.js'; // Imports and initializes SQLite
+import productRoutes from './routes/productRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
 
 // Load environment variables from .env
 dotenv.config();
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -32,6 +36,11 @@ app.get('/api/health', (req, res) => {
     });
   }
 });
+
+// API Routes
+app.use('/api/products', productRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Start the server
 app.listen(PORT, () => {

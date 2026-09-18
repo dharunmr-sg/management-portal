@@ -9,10 +9,11 @@ export default function ProductForm({ initialData = null, onSubmit, onCancel, is
     category: '',
     brand: '',
     price: '',
-    discountPercentage: '',
+    discount_percentage: '',
     stock: '',
     rating: '',
-    thumbnail: ''
+    thumbnail: '',
+    sku: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -25,10 +26,11 @@ export default function ProductForm({ initialData = null, onSubmit, onCancel, is
         category: initialData.category || '',
         brand: initialData.brand || '',
         price: initialData.price !== undefined ? initialData.price : '',
-        discountPercentage: initialData.discountPercentage !== undefined ? initialData.discountPercentage : '',
+        discount_percentage: initialData.discount_percentage !== undefined ? initialData.discount_percentage : '',
         stock: initialData.stock !== undefined ? initialData.stock : '',
         rating: initialData.rating !== undefined ? initialData.rating : '',
-        thumbnail: initialData.thumbnail || ''
+        thumbnail: initialData.thumbnail || '',
+        sku: initialData.sku || ''
       });
     }
   }, [initialData]);
@@ -55,9 +57,9 @@ export default function ProductForm({ initialData = null, onSubmit, onCancel, is
       newErrors.price = 'Price is required.';
     }
 
-    if (formData.discountPercentage !== '') {
-      const disc = Number(formData.discountPercentage);
-      if (disc < 0 || disc > 100) newErrors.discountPercentage = 'Must be between 0 and 100.';
+    if (formData.discount_percentage !== '') {
+      const disc = Number(formData.discount_percentage);
+      if (disc < 0 || disc > 100) newErrors.discount_percentage = 'Must be between 0 and 100.';
     }
 
     if (formData.stock !== '') {
@@ -87,7 +89,7 @@ export default function ProductForm({ initialData = null, onSubmit, onCancel, is
       const submissionData = {
         ...formData,
         price: Number(formData.price),
-        discountPercentage: formData.discountPercentage ? Number(formData.discountPercentage) : 0,
+        discount_percentage: formData.discount_percentage ? Number(formData.discount_percentage) : 0,
         stock: Number(formData.stock),
         rating: formData.rating ? Number(formData.rating) : 0
       };
@@ -149,10 +151,10 @@ export default function ProductForm({ initialData = null, onSubmit, onCancel, is
           <Input
             type="number"
             step="0.01"
-            name="discountPercentage"
-            value={formData.discountPercentage}
+            name="discount_percentage"
+            value={formData.discount_percentage}
             onChange={handleChange}
-            error={errors.discountPercentage}
+            error={errors.discount_percentage}
             placeholder="0 - 100"
           />
         </div>
@@ -182,8 +184,18 @@ export default function ProductForm({ initialData = null, onSubmit, onCancel, is
           />
         </div>
 
-        {/* Thumbnail URL */}
-        <div className="md:col-span-2">
+        {/* SKU & Thumbnail URL */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SKU</label>
+          <Input
+            name="sku"
+            value={formData.sku}
+            onChange={handleChange}
+            error={errors.sku}
+            placeholder="e.g. APP-IPH-15P"
+          />
+        </div>
+        <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Thumbnail URL</label>
           <Input
             type="url"

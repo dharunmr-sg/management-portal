@@ -3,6 +3,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useSidebar } from '../../context/SidebarContext';
 import { useProductContext } from '../../context/ProductContext';
 import { useHeaderContext } from '../../context/HeaderContext';
+import { useDataSource } from '../../context/DataSourceContext';
 
 const getPageTitle = (pathname) => {
   if (pathname === '/' || pathname.startsWith('/dashboard')) return 'Dashboard';
@@ -22,6 +23,7 @@ export default function Navbar({ onMenuClick }) {
   const { isCollapsed, openMobile } = useSidebar();
   const { selectedProduct, setSelectedProduct } = useProductContext();
   const { headerContent } = useHeaderContext();
+  const { dataSource, setDataSource } = useDataSource();
   const location = useLocation();
   const pageTitle = getPageTitle(location.pathname);
 
@@ -103,13 +105,44 @@ export default function Navbar({ onMenuClick }) {
                 </button>
               </div>
             ) : (
-              <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300 truncate">
-                {pageTitle}
-              </h1>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300 truncate">
+                  {pageTitle}
+                </h1>
+                <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50">
+                  {dataSource === 'api' ? 'API Integrated' : 'Local DB Integrated'}
+                </span>
+              </div>
             )}
           </div>
 
           <div className="flex items-center gap-4 flex-shrink-0 ml-4">
+            {/* Data Source Toggle */}
+            <div className="hidden sm:flex items-center bg-gray-100 dark:bg-gray-700/50 rounded-lg p-1 border border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setDataSource('api')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 ${
+                  dataSource === 'api'
+                    ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+                title="Load data from the external API"
+              >
+                API
+              </button>
+              <button
+                onClick={() => setDataSource('local')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-200 ${
+                  dataSource === 'local'
+                    ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+                title="Load data from the Express backend and SQLite"
+              >
+                Local DB
+              </button>
+            </div>
+
             {/* Dark Mode Toggle Button */}
             <button
               onClick={toggleTheme}
